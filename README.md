@@ -1,0 +1,1 @@
+# GWAS_QC_pipeline_ver_1.0
