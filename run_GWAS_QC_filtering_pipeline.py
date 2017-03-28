@@ -6,6 +6,7 @@ import datetime
 from fpdf import FPDF
 sys.path.append(".")
 import generate_report
+import generate_illumina_snp_stats
 
 class Pipeline(BasePipeline):
 		
@@ -24,13 +25,21 @@ class Pipeline(BasePipeline):
 		}
 
 	def add_pipeline_args(self, parser):
-		parser.add_argument('-sampleTable', required=True, help="Full path to text file of Illumina sample table metrics")
+		parser.add_argument('-sampleTable', required=True, help="[REQUIRED] Full path to text file of Illumina sample table metrics tab-delimited")
+		parser.add_argument('-snpTable', required=True, help="[REQUIRED] Full path to text file of Illumina SNP table tab-delimited")
 		parser.add_argument('--projectName', default='test', help="Name of project or owner of project")
-		#parser.add_argument('-snpTable', required=True, help="Full path to text file of Illumina SNP table")
 		#parser.add_argument('-inputPLINK', required=True, help="Full path to PLINK file to be used in analysis (post GenomeStudio cleanup)")
-		parser.add_argument('--callrate', default=0.991, help="minimum call rate to be included in sample set")
-	
-	
+		parser.add_argument('--callrate', default=0.991, help="[default:0.991] minimum call rate to be included in sample set")
+		parser.add_argument('--snp_callrate', default=0.97, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
+		parser.add_argument('--clusterSep', default=0.30, help='[default:0.30] mimimum allowable cluster separation value in order for SNP to be retained (anything equal to or below this value is removed')
+		parser.add_argument('--AATmean', default=0.30, help='[default:0.30] maximum allowable AA T mean threshold in order for SNP to be retained (anything above this value is removed')
+		parser.add_argument('--AATdev', default=0.06, help='[default:0.06] maximum allowable AA T dev threshold in order for SNP to be retained (anything above this value is removed)')
+		parser.add_argument('--BBTmean', default=0.70, help='[default:0.70] minimum allowable BB T mean threshold in order for SNP to be retained (anything below this value is removed)')
+		parser.add_argument('--BBTdev', default=0.06, help='[default:0.06] maximum allowable BB T dev threshold in order for SNP to be retained (anything above this value is removed)')
+		parser.add_argument('--AARmean', default=0.20, help='[default:0.20] minimum allowable AA R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
+		parser.add_argument('--ABRmean', default=0.20, help='[default:0.20] minimum allowable AB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
+		parser.add_argument('--BBRmean', default=0.20, help='[default:0.20] minimum allowable BB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
+
 	@staticmethod
 	def check_input_format(inputPlinkfile):
 		pass;
@@ -49,18 +58,20 @@ class Pipeline(BasePipeline):
 		pdf.cell(0, 10, 'Date:  '+str(datetime.date.today()), 0, 1, 'C')
 
 		# write thresholds and parameters to PDF file
-		generate_report.thresholds_and_parameters(callrate=pipeline_args['callrate'])
+		generate_report.thresholds_and_parameters(pdf=pdf, callrate=pipeline_args['callrate'], clusterSep=pipeline_args['clusterSep'])
 		# a list of files to remove once pipeline in finished running, clean up purposes
 		stage_for_deletion = []
 		
 		
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		remove_samples = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, project=pipeline_args['projectName'],
-			callrate=pipeline_args['callrate'])
-		pdf.output(pipeline_args['projectName']+'.pdf', 'F')
-		#remove_snps = generate_report.illumina_snp_overview(inputFile=add_pipeline_args['snpTable'])
+		remove_samples = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'])
+		generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
+					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
+					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'])
 
+
+		pdf.output(pipeline_args['projectName']+'.pdf', 'F')
 
 		# TO DO:
 		# use plink --remove to remove the samples that fail QC in remove_sample file
