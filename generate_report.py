@@ -1,4 +1,5 @@
 from fpdf import FPDF
+import re
 import pandas
 import matplotlib.pyplot as plt
 import statistics as stats
@@ -6,10 +7,14 @@ import collections
 import numpy as np
 
 
-def thresholds_and_parameters(callrate):
-	pass;
+def thresholds_and_parameters(pdf, callrate, clusterSep):
+	pdf.add_page()
+	pdf.set_font('Arial', 'B', 30)
+	pdf.cell(0, 30, "Parameters and Thresholds", 0, 1, 'L')
 
-def illumina_sample_overview(inputFile, pdf, project, callrate):
+
+def illumina_sample_overview(inputFile, pdf, callrate):
+	print "Running Illumina Sample QC..."
 	samples_to_remove_text = open('samples_to_remove.txt', 'w')
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
@@ -69,7 +74,3 @@ def illumina_sample_overview(inputFile, pdf, project, callrate):
 	return samples_to_remove_text
 
 
-def illumina_snp_overview(inputFile, pdf):
-	snp_qc_table = pandas.read_table(inputFile, delim_whitespace=True)
-
-	return snps_to_remove
