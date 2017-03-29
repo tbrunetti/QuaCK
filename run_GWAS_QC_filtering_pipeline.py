@@ -27,8 +27,8 @@ class Pipeline(BasePipeline):
 	def add_pipeline_args(self, parser):
 		parser.add_argument('-sampleTable', required=True, help="[REQUIRED] Full path to text file of Illumina sample table metrics tab-delimited")
 		parser.add_argument('-snpTable', required=True, help="[REQUIRED] Full path to text file of Illumina SNP table tab-delimited")
+		parser.add_argument('-inputPLINK', required=True, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
 		parser.add_argument('--projectName', default='test', help="Name of project or owner of project")
-		#parser.add_argument('-inputPLINK', required=True, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
 		parser.add_argument('--callrate', default=0.991, help="[default:0.991] minimum call rate to be included in sample set")
 		parser.add_argument('--snp_callrate', default=0.97, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
 		parser.add_argument('--clusterSep', default=0.30, help='[default:0.30] mimimum allowable cluster separation value in order for SNP to be retained (anything equal to or below this value is removed')
@@ -39,23 +39,37 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--AARmean', default=0.20, help='[default:0.20] minimum allowable AA R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
 		parser.add_argument('--ABRmean', default=0.20, help='[default:0.20] minimum allowable AB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
 		parser.add_argument('--BBRmean', default=0.20, help='[default:0.20] minimum allowable BB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
+		parser.add_argument('--genome_build', default='b37-hg19', help='[default:hg19], genome build options: b36-hg18, b37-hg19, b38-hg38')
 
 	@staticmethod
-	def check_input_format(inputPlinkfile):
+	def check_input_format(inputPlinkfile, plink):
 		if inputPlinkfile[-4:].lower() == '.ped':
 			print "Input .ped, converting to binary"
-			plink_general.run(
-				Parameter('--file', inputPlinkfile[:-4]),
-				Parameter('--make-bed'),
-				Parameter('--out', inputPlinkFile[:-4])
-				)
+			convert = subprocess.call(['./'+str(plink), '--file', str(inputPlinkfile[:-4]), '--make-bed', '--out', str(inputPlinkfile[:-4])])
 
 		elif inputPlinkfile[-4:].lower() == '.bed':
 			print "Input seems to follow bed format"
 		
 		else:
 			sys.exit("Error!! Input not recognized, please input .ped or .bed PLINK file" )
-	
+
+	@staticmethod
+	def extract_X_boundries(build):
+		if build == 'b37-hg19':
+			last_bp_head = 2699520
+			first_bp_tail = 154931044
+			return last_bp_head, first_bp_tail
+		elif build == 'b36-hg18':
+			last_bp_head = 2709521
+			first_bp_tail = 154584237
+			return last_bp_head, first_bp_tail
+		elif build == 'b38-hg38':
+			last_bp_head = 2781479
+			first_bp_tail = 155701383
+			return last_bp_head, first_bp_tail
+		else:
+			print "Specified build does not exist, please select different build (see -h for options)"
+
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
 		# create PDF object for output
@@ -77,29 +91,42 @@ class Pipeline(BasePipeline):
 		
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		remove_samples = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'])
-		generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
-					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
-					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'])
+		#remove_samples = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'])
+		#generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
+		#			aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
+		#			bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'])
 
 
 		pdf.output(pipeline_args['projectName']+'.pdf', 'F')
 
 		# TO DO:
 		# use plink --remove to remove the samples that fail QC in remove_sample file
-
+		# use plink --exclude to remove the snps that fail QC 
 		
-		plink_general = Software('plink', pipeline_args['plink']['path'])
-		plink_freq = Software('plink', pipeline_config['plink']['path'], '--freq')
-		
+		plink_general = Software('plink', pipeline_config['plink']['path'])
 
 		# checks file format of PLINK file, if not in binary converts to binary
-		#self.check_input_format(
-		#	inputPlinkfile=add_pipeline_args['inputPLINK']
-		#	)
+		self.check_input_format(
+			inputPlinkfile=pipeline_args['inputPLINK'], plink=pipeline_config['plink']['path']
+			)
 
 
+		# perform sex checks
+		# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--split-x', self.extract_X_boundries(pipeline_args['genome_build'])[0], self.extract_X_boundries(pipeline_args['genome_build'])[1]),
+			Parameter('no-fail'),
+			Parameter('--make-bed'),
+			)
+		# check sex
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--check-sex'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4])
+			)
 
+		generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck')
 
 
 
