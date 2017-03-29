@@ -5,12 +5,17 @@ import matplotlib.pyplot as plt
 import statistics as stats
 import collections
 import numpy as np
+import seaborn as sns
 
 
-def thresholds_and_parameters(pdf, callrate, clusterSep):
+def thresholds_and_parameters(pdf, params):
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
 	pdf.cell(0, 30, "Parameters and Thresholds", 0, 1, 'L')
+	pdf.line(10, 32, 210, 32)
+	pdf.set_font('Arial', '', 16)
+	for key in params:
+		pdf.cell(0, 8, str(key)+':     '+str(params[key]), 0, 1, 'L')
 
 
 def illumina_sample_overview(inputFile, pdf, callrate):
@@ -24,7 +29,8 @@ def illumina_sample_overview(inputFile, pdf, callrate):
 	# retrieve sample ids of those with missing call rage less than call rate parameter provided by user; default = 0.991
 	samples_to_remove = list(sample_qc_table[sample_qc_table['Call Rate'] < callrate]['Sample ID'])
 	basic_call_stats = [stats.median(sample_qc_table['Call Rate']), stats.mean(sample_qc_table['Call Rate']), stats.stdev(sample_qc_table['Call Rate']), min(sample_qc_table['Call Rate']), max(sample_qc_table['Call Rate'])]
-	pdf.cell(0, 30, "Sample Quality", 0, 1, 'L')
+	pdf.cell(0, 30, "Sample Quality Assessment", 0, 1, 'L')
+	pdf.line(10, 32, 210, 32)
 	pdf.set_font('Arial', '', 16)
 	pdf.cell(0, 8, "Total samples analyzed:  "+str(total_samples), 0, 1, 'L')
 	pdf.cell(0, 8, "Number of samples passing missing call rate threshold:  " + str(total_samples-len(samples_to_remove)), 0, 1, 'L')	
@@ -72,5 +78,35 @@ def illumina_sample_overview(inputFile, pdf, callrate):
 	samples_to_remove_text.flush() # flushes out buffer
 
 	return samples_to_remove_text
+
+
+def graph_sexcheck(pdf, sexcheck):
+	print "checking sex concordance"
+	pdf.add_page()
+	pdf.cell(0, 30, "Sex Concordance Check", 0, 1, 'L')
+	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
+	sorted_sex_check_dataframe = sex_check_dataframe.sort(['F'], ascending=True)
+	sorted_sex_check_dataframe['rank'] = list(range(1, len(list(sorted_sex_check_dataframe['FID']))+1))
+	
+	sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 25})
+	sns.plt.suptitle('Sex and F coefficient based on pedigree sex data')
+	sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
+	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+	plt.savefig('sample_sex.png', bbox_inches='tight')
+
+	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 25})
+	sns.plt.suptitle('Sex and F coefficient based on imputed sex data')
+	imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeing coefficient')
+	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+	plt.savefig('imputed_sex.png', bbox_inches='tight')
+
+	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 25})
+	sns.plt.suptitle('Sex and F coefficient discrpencies based on imputed and pedigree data')
+	sns.plt.subplots_adjust(top=.9)
+	discrepencies_bw_imputed_and_collected.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
+	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+	plt.savefig('discrepencies_sex.png', bbox_inches='tight')
+
+	print sorted_sex_check_dataframe
 
 
