@@ -28,7 +28,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('-sampleTable', required=True, help="[REQUIRED] Full path to text file of Illumina sample table metrics tab-delimited")
 		parser.add_argument('-snpTable', required=True, help="[REQUIRED] Full path to text file of Illumina SNP table tab-delimited")
 		parser.add_argument('--projectName', default='test', help="Name of project or owner of project")
-		#parser.add_argument('-inputPLINK', required=True, help="Full path to PLINK file to be used in analysis (post GenomeStudio cleanup)")
+		#parser.add_argument('-inputPLINK', required=True, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
 		parser.add_argument('--callrate', default=0.991, help="[default:0.991] minimum call rate to be included in sample set")
 		parser.add_argument('--snp_callrate', default=0.97, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
 		parser.add_argument('--clusterSep', default=0.30, help='[default:0.30] mimimum allowable cluster separation value in order for SNP to be retained (anything equal to or below this value is removed')
@@ -42,7 +42,19 @@ class Pipeline(BasePipeline):
 
 	@staticmethod
 	def check_input_format(inputPlinkfile):
-		pass;
+		if inputPlinkfile[-4:].lower() == '.ped':
+			print "Input .ped, converting to binary"
+			plink_general.run(
+				Parameter('--file', inputPlinkfile[:-4]),
+				Parameter('--make-bed'),
+				Parameter('--out', inputPlinkFile[:-4])
+				)
+
+		elif inputPlinkfile[-4:].lower() == '.bed':
+			print "Input seems to follow bed format"
+		
+		else:
+			sys.exit("Error!! Input not recognized, please input .ped or .bed PLINK file" )
 	
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
@@ -58,7 +70,7 @@ class Pipeline(BasePipeline):
 		pdf.cell(0, 10, 'Date:  '+str(datetime.date.today()), 0, 1, 'C')
 
 		# write thresholds and parameters to PDF file
-		generate_report.thresholds_and_parameters(pdf=pdf, callrate=pipeline_args['callrate'], clusterSep=pipeline_args['clusterSep'])
+		generate_report.thresholds_and_parameters(pdf=pdf, params=pipeline_args)
 		# a list of files to remove once pipeline in finished running, clean up purposes
 		stage_for_deletion = []
 		
@@ -76,14 +88,15 @@ class Pipeline(BasePipeline):
 		# TO DO:
 		# use plink --remove to remove the samples that fail QC in remove_sample file
 
+		
+		plink_general = Software('plink', pipeline_args['plink']['path'])
+		plink_freq = Software('plink', pipeline_config['plink']['path'], '--freq')
+		
+
 		# checks file format of PLINK file, if not in binary converts to binary
 		#self.check_input_format(
 		#	inputPlinkfile=add_pipeline_args['inputPLINK']
 		#	)
-
-		#plink_freq = Software('plink', pipeline_config['plink']['path'] +' --freq')
-
-
 
 
 
