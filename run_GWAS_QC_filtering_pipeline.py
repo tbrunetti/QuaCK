@@ -12,7 +12,7 @@ class Pipeline(BasePipeline):
 		
 	def dependencies(self):
 		# assuming user as pip installed
-		return ['pandas', 'matplotlib', 'fpdf', 'Pillow']
+		return ['pandas', 'matplotlib', 'fpdf', 'Pillow', 'seaborn']
 
 	def description(self):
 		return 'Pipeline to perform sample QC (call rate, HWE, Mendelian Error)'
@@ -127,7 +127,6 @@ class Pipeline(BasePipeline):
 			)
 
 		generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck')
-
 
 
 
