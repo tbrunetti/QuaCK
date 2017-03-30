@@ -6,9 +6,9 @@ import statistics as stats
 import collections
 import numpy as np
 
-def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, bbtdev, aarmean, abrmean, bbrmean, callrate):
+def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, bbtdev, aarmean, abrmean, bbrmean, callrate, outDir):
 	print "Running Illumina SNP QC"
-	snps_to_remove_text = open('snps_to_remove.txt', 'w')
+	snps_to_remove_text = open(outDir+'/snps_to_remove.txt', 'w')
 	snp_qc_table = pandas.read_table(inputFile)
 	autosomes_only = snp_qc_table.loc[snp_qc_table['Chr'].isin(list(range(1,23)))] # make a dataframe for chromosomes 1-22 
 	non_autosomes = snp_qc_table.loc[~snp_qc_table['Chr'].isin(list(range(0,23)))] # make a dataframe for MT, X, Y, X*Y
