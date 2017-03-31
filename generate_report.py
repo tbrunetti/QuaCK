@@ -51,6 +51,7 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 	samples_to_remove_text.flush() # flushes out buffer
 
 
+
 	def check_GC_callrate(sampleInfo):
 		sample_quality_graph = sns.jointplot('Call Rate','p10 GC', data=sampleInfo, kind="reg")
 		sns.plt.suptitle('Overall Sample Quality')
@@ -87,12 +88,12 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 		pdf.multi_cell(0, 10, 'Ethnic Background of all samples:', 0, 1, 'L')
 		
 		for key in all_samples_ethnicity: # writes out to PDF of number of samples in each ethnic group
-			pdf.set_x(20)
+			pdf.set_x(40)
 			pdf.multi_cell(0, 8, str(key)+':  '+str(all_samples_ethnicity[key]), 0, 1, 'L')
 		
 		pdf.multi_cell(0, 10, 'Ethnic Background of removed samples:', 0, 1, 'L')
 		for key in ethnicity_removals: # write out to PDF the ethnic backgrounds of the removed samples
-			pdf.set_x(20)
+			pdf.set_x(40)
 			pdf.multi_cell(0, 8, str(key)+':  '+str(ethnicity_removals[key]), 0, 1, 'L')		
 
 
@@ -101,19 +102,24 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 
 	return samples_to_remove_text
 
+def graph_missingness(sample, snp, pdf, outDir):
+	pass;
+
+
+
 
 def graph_sexcheck(pdf, sexcheck, outDir):
 	print "checking sex concordance"
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
 	pdf.set_margins(20, 10, 20)
-	pdf.multi_cell(0, 30, "Sex Concordance Check", 0, 1, 'L')
+	pdf.multi_cell(0, 30, "Overall Sex Concordance Check", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
 	sorted_sex_check_dataframe = sex_check_dataframe.sort(['F'], ascending=True)
 	sorted_sex_check_dataframe['rank'] = list(range(1, len(list(sorted_sex_check_dataframe['FID']))+1))
 	
-	sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 25})
+	sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
 	sns.plt.suptitle('Sex and F coefficient based on pedigree sex data')
 	sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
@@ -121,7 +127,7 @@ def graph_sexcheck(pdf, sexcheck, outDir):
 	plt.close()
 	pdf.image(outDir+'/'+"sample_sex.png", x=20, y=35, w=79, h=85)
 
-	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 25})
+	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
 	sns.plt.suptitle('Sex and F coefficient based on imputed sex data')
 	imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeing coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
@@ -129,7 +135,7 @@ def graph_sexcheck(pdf, sexcheck, outDir):
 	plt.close()
 	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=35, w=79, h=85)
 
-	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 25})
+	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
 	sns.plt.suptitle('Discrepencies between imputed and pedigree data')
 	sns.plt.subplots_adjust(top=.9)
 	discrepencies_bw_imputed_and_collected.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
@@ -138,6 +144,109 @@ def graph_sexcheck(pdf, sexcheck, outDir):
 	plt.close()
 	pdf.image(outDir+'/'+"discrepencies_sex.png", x=20, y=130, w=79, h=85)
 
-	print sorted_sex_check_dataframe
+	
 
+def batch_effects(pdf, sexcheck, missingness, outDir):
+	# sex concordance between batches
+	pdf.add_page()
+	pdf.set_font('Arial', 'B', 30)
+	pdf.set_margins(20, 10, 20)
+	pdf.multi_cell(0, 30, "Batch Statistics", 0, 1, 'L')
+	pdf.line(20, 32, 190, 32)
+	
+	# sex check and sample missingness by batch and by chip
+	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
+	sample_missingness_dataframe = pandas.read_table(missingness, delim_whitespace=True)
+	batch_sex = {}
+	batch_missing = {}
+	for batch in list(sex_check_dataframe['IID']):
+		if re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', batch):
+			batch_id = re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', batch)
+			if batch_id.group(1) in batch_sex:
+				batch_sex[batch_id.group(1)] = batch_sex[batch_id.group(1)] + [list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['STATUS']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['PEDSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['SNPSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['F']) + [batch_id.group(2)]]
+				batch_missing[batch_id.group(1)] = batch_missing[batch_id.group(1)] + [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]]
+			else:
+				batch_sex[batch_id.group(1)] = [list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['STATUS']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['PEDSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['SNPSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['F']) + [batch_id.group(2)]]
+				batch_missing[batch_id.group(1)] = [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]]
+		else:
+			print 'BATCH ID [' + str(batch) + '] not formatted properly!'
+	
+	
+	pdf.set_font('Arial', '', 16)
+	pdf.multi_cell(0, 10, 'Total Number of Batches:  ' +  str(len(batch_sex)), 0, 1, 'L')
+	# missingness data format data for seaborn boxplot/strip plot
+	all_batch_callrate = []
+	for key in batch_missing:
+		callrate_per_batch = [[str(key), str(batch_missing[key][i][0]), str(batch_missing[key][i][1])] for i in range(0, len(batch_missing[key]))]
+		all_batch_callrate = all_batch_callrate + callrate_per_batch
+	# missingness data read data into pandas dataframe
+	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate', 'wellID'])
+	missing_call_dataframe['missing call rate']=missing_call_dataframe['missing call rate'].astype(float)
+	missing_genotypes = sns.boxplot(x='missing call rate', y='batch', data=missing_call_dataframe, color=".8")
+	missing_genotypes = sns.stripplot(x='missing call rate', y='batch', data=missing_call_dataframe, jitter=True)
+	sns.plt.suptitle('Overall missing call rate per sample across batches')
+	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+	plt.savefig(outDir+'/'+'missing_call_rate_samples.png')
+	plt.close()
+	pdf.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=130, w=190, h=150)
+
+	# outputs graphs and statistics per batch based on sex	
+	for key in batch_sex:
+		pdf.add_page()
+		pdf.set_font('Arial', 'B', 18)
+		pdf.set_margins(20, 10, 20)
+		pdf.multi_cell(0, 30, "Sample Statistics for Batch ID: "+str(key), 0, 1, 'L')
+		pdf.line(20, 30, 190, 30) 
+		batch_dataframe = pandas.DataFrame(batch_sex[key], columns=['Discrepencies', 'PEDSEX', 'SNPSEX', 'F', 'well'])
+		sorted_sex_batch_dataframe = batch_dataframe.sort(['F'], ascending=True)
+		sorted_sex_batch_dataframe['rank'] = list(range(1, len(list(sorted_sex_batch_dataframe['well']))+1))
+		
+		# all sex based batch analysis
+		sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_batch_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
+		sns.plt.suptitle('Sex and F coefficient based on pedigree sex data')
+		sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
+		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+		plt.savefig(outDir+'/'+'sample_sex'+str(key)+'.png', bbox_inches='tight')
+		plt.close()
+		pdf.image(outDir+'/'+"sample_sex"+str(key)+'.png', x=20, y=85, w=79, h=85)
+
+		imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_batch_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
+		sns.plt.suptitle('Sex and F coefficient based on imputed sex data')
+		imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
+		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+		plt.savefig(outDir+'/'+'imputed_sex'+str(key)+'.png', bbox_inches='tight')
+		plt.close()
+		pdf.image(outDir+'/'+"imputed_sex"+str(key)+'.png', x=110, y=85, w=79, h=85)
+
+		discrepencies_sex = sns.lmplot(x='rank', y='F', hue='Discrepencies', data=sorted_sex_batch_dataframe, fit_reg=False, palette={"OK":'black', "PROBLEM":'red'}, scatter_kws={"s": 20})
+		sns.plt.suptitle('Discrepencies between imputed and pedigree data')
+		discrepencies_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
+		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+		plt.savefig(outDir+'/'+'discrepencies_sex'+str(key)+'.png', bbox_inches='tight')
+		plt.close()
+		pdf.image(outDir+'/'+"discrepencies_sex"+str(key)+'.png', x=20, y=190, w=79, h=85)
+
+		contradictions_headers = sorted_sex_batch_dataframe['Discrepencies'].value_counts().index.tolist()
+		contradictions = sorted_sex_batch_dataframe['Discrepencies'].value_counts()
+		
+		if 'PROBLEM' not in contradictions_headers:
+			pdf.set_font('Arial', 'B', 14)
+			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1,'L')
+			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  100.0%", 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+'0', 0, 1, 'L')
+
+		elif 'OK' not in contradictions_headers:
+			pdf.set_font('Arial', 'B', 14)
+			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  '0.0%", 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
+			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
+			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
+		else:
+			pdf.set_font('Arial', 'B', 14)
+			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str(float(contradictions['OK'])/float(len(batch_sex[key])))+'%', 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
+			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
+			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
 
