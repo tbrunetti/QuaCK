@@ -110,6 +110,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	snps_to_remove = list(set(snps_fail_clus_sep + snps_fail_AATmean + snps_fail_AATdev + snps_fail_BBTmean + snps_fail_BBTdev + snps_fail_AARmean + snps_fail_ABRmean + snps_fail_BBRmean + autosomal_snps_fail_callrate))
 
 	snps_to_remove_text.write('\n'.join(snps_to_remove))
+	snps_to_remove_text.flush()
 
 	
 
@@ -213,12 +214,4 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 			+ '('+str((float(total_snps_passing_BBRmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
 
 	print "		...Finished writing SNP QC statistics..."	
-
-
-
-
-
-	#return snps_to_remove
-
-
-
+	return snps_to_remove_text
