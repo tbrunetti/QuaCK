@@ -101,19 +101,19 @@ class Pipeline(BasePipeline):
 		stage_for_deletion = []
 		
 		
+		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		remove_samples = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir)
-		generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
-					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
-					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'], outDir=outdir)
-
+		#remove_samples = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir)
+		
+		#illumina_snps_to_remove = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
+		#			aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
+		#			bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'], outDir=outdir)
 
 
 		# TO DO:
 		# use plink --remove to remove the samples that fail QC in remove_sample file
-		# use plink --exclude to remove the snps that fail QC 
-		
+	
 		plink_general = Software('plink', pipeline_config['plink']['path'])
 
 		# checks file format of PLINK file, if not in binary converts to binary
@@ -121,6 +121,18 @@ class Pipeline(BasePipeline):
 			inputPlinkfile=pipeline_args['inputPLINK'], plink=pipeline_config['plink']['path']
 			)
 
+		#-----ROUND 1 SNP QC (Illumina recommended SNP metrics threhold removal)------
+
+		# remove Illumina sample and SNP initial QC:
+		#plink_general.run(
+		#	Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+		#	Parameter('--exclude', illumina_snps_to_remove),
+		#	Parameter('--make-bed'),
+		#	Parameter('--out', pipeline_args['inputPLINK'][:-4]+'removed-Illumina-SNPs')
+		#	)
+		
+		
+		#----ROUND 1 SAMPLE QC (sex check------
 
 		# perform sex checks
 		# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
@@ -137,8 +149,32 @@ class Pipeline(BasePipeline):
 			Parameter('--out', pipeline_args['inputPLINK'][:-4])
 			)
 
+		# plink missingness calculations primarily for sample missingness check
+		print "Running PLINK sample and snp missingness"
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--missing'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4])
+			)
+
+		generate_report.batch_effects(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'.imiss', outDir=outdir)
 		# not imbedded in Illumina Sample check because uses own input files
 		generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', outDir=outdir)
+
+
+		
+		#----ROUND 2 SNP QC-------
+
+		# plink missingness calculations
+		print "Running PLINK sample and snp missingness"
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--missing'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4])
+			)
+
+
+		#----ROUND 2 SAMPLE QC------
 
 
 		pdf.output(outdir + '/'+pipeline_args['projectName']+'.pdf', 'F')
