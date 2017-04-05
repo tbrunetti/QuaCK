@@ -37,10 +37,15 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 	pdf.set_font('Arial', '', 16)
 	pdf.multi_cell(0, 8, "Total samples analyzed:  "+str(total_samples), 0, 1, 'L')
 	pdf.multi_cell(0, 8, "Number of samples passing missing call rate threshold:  " + str(total_samples-len(samples_to_remove)), 0, 1, 'L')	
+	pdf.set_x(40)
 	pdf.multi_cell(0, 8, "Median call rate:  "+ str(basic_call_stats[0]), 0, 1, 'L')
+	pdf.set_x(40)
 	pdf.multi_cell(0, 8, "Mean call rate:  "+ str(basic_call_stats[1]), 0, 1, 'L')
+	pdf.set_x(40)
 	pdf.multi_cell(0, 8, "Standard deviation call rate:  "+ str(basic_call_stats[2]), 0, 1, 'L')
+	pdf.set_x(40)
 	pdf.multi_cell(0, 8, "Minimum call rate:  "+ str(basic_call_stats[3]), 0, 1, 'L')
+	pdf.set_x(40)
 	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str(basic_call_stats[4]), 0, 1, 'L')
 	
 
@@ -82,7 +87,7 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 		ethnicity_removals = collections.Counter(store_removal_ethnicity)
 		
 		pdf.set_font('Arial', 'B', 20)
-		pdf.multi_cell(0, 30, "Ethnicity Distribution", 0, 1, 'L')
+		pdf.multi_cell(0, 30, "Race and Ethnicity Distribution", 0, 1, 'L')
 		pdf.line(20, 32, 190, 32)
 		pdf.set_font('Arial', '', 16)
 		pdf.multi_cell(0, 10, 'Ethnic Background of all samples:', 0, 1, 'L')
@@ -245,8 +250,47 @@ def batch_effects(pdf, sexcheck, missingness, outDir):
 		else:
 			pdf.set_font('Arial', 'B', 14)
 			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str(float(contradictions['OK'])/float(len(batch_sex[key])))+'%', 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str((float(contradictions['OK'])/float(len(batch_sex[key])))*100)+'%', 0, 1, 'L')
 			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
 			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
 			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
 
+			rows = []
+			columns = []
+			for i in problem_wells:
+				rows.append(i[0])
+				columns.append(i[1:])
+			width = 1
+			all_rows =['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+			problem_rows = collections.Counter(rows)
+			for row in all_rows:
+				if row not in problem_rows:
+					problem_rows[row] = 0
+			
+			all_columns=['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
+			problem_columns = collections.Counter(columns)
+			for col in all_columns:
+				if col not in problem_columns:
+					problem_columns[col] = 0
+			
+			problem_rows_sorted= sorted(problem_rows)
+			problem_columns_sorted = sorted(problem_columns)
+			
+			plt.bar(np.arange(len(problem_rows.keys())), problem_rows.values(), width)
+			plt.xticks(np.arange(len(problem_rows.keys())) + width*0.5, problem_rows.keys())
+			plt.title('Distribution of problematic rows', fontweight='bold')
+			plt.xlabel("plate row ID", fontweight='bold')
+			plt.ylabel("Frequency", fontweight='bold')
+			plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+			plt.savefig(outDir+'/'+'problem_rows'+str(key)+'.png', bbox_inches='tight')
+			plt.close()
+			pdf.image(outDir+'/'+"problem_rows"+str(key)+'.png', x=110, y=190, w=79, h=42)
+			plt.bar(np.arange(len(problem_columns.keys())), problem_columns.values(), width)
+			plt.xticks(np.arange(len(problem_columns.keys())) + width*0.5, problem_columns.keys())
+			plt.title('Distribution of problematic columns')
+			plt.xlabel("plate column number")
+			plt.ylabel("Frequency")
+			plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+			plt.savefig(outDir+'/'+'problem_columns'+str(key)+'.png', bbox_inches='tight')
+			plt.close()
+			pdf.image(outDir+'/'+"problem_columns"+str(key)+'.png', x=110, y=230, w=79, h=42)
