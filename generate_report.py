@@ -10,37 +10,51 @@ import seaborn as sns
 
 # this method will be called last so everything can be calculated
 # then rearrange pages in PDF so this become page 2
-def overall_main_page_stats(pdf):
+def overall_main_page_stats(pdf, originalFile, cleanedFile):
+	num_samples_analyzed = sum(1 for line in open(originalFile+'.fam'))
+	num_samples_qc_pass = sum(1 for line in open(cleanedFile+'.fam'))
+	num_snps_analyzed = sum(1 for line in open(originalFile+'.bim'))
+	num_snps_qc_pass = sum(1 for line in open(cleanedFile+'.bim'))
+
 	pdf.add_page()
 	pdf.set_margins(20, 10, 20)
 	pdf.set_font('Arial', 'B', 30)
+	pdf.set_x(20)
 	pdf.multi_cell(0, 30, "QC Summary Statistics", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	pdf.set_font('Arial', '', 12)
-	pdf.multi_cell(0, 8, "Listed below are the basic overall summary statistics for this project \
+	pdf.multi_cell(0, 5, "Listed below are the basic overall summary statistics for this project \
 		broken down into three categories: Sample Summary, SNP Summary, and Data Summary. For more detailed \
 		information please refer to the subsequent pages.  They will provide you with a more granular view of the \
 		quality control pipeline that was performed as well as parameters and thresholds that were used.  At the end \
 		of the PDF there is also a definitions page that lists what each metric means and how it was calculated.  If you \
 		have any questions or concerns please contact the TICR department at the University of Colorado Anschutz Medical \
-		campus at (303) 724-9918. ", 0, 1, 'L')
+		campus at (303) 724-9918. "+'\n\n\n\n\n', 0, 1, 'J')
+	pdf.set_font('Arial', 'B', 16)
+	pdf.set_fill_color(200)
+	pdf.multi_cell(0, 8, "Sample Summary", 1, 'L', True)
+	pdf.set_x(30)
 	pdf.set_font('Arial', '', 16)
-	pdf.multi_cell(0, 8, "Sample Summary", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total Samples analyzed:  "+str(num_samples_analyzed), 1, '1', 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Total Samples analyzed:  ", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total Samples Passing QC:  "+str(num_samples_qc_pass), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "\n\n\n\n\n", 0, 1, 'L')
+	pdf.set_font('Arial', 'B', 16)
+	pdf.multi_cell(0, 8, "SNP Summary", 1, 'L', True)
+	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Total Samples Passing QC:  ", 0, 1, 'L')
-	pdf.multi_cell(0, 8, "SNP Summary", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total SNPs analyzed:  "+str(num_snps_analyzed), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Total SNPs analyzed:  ", 0, 1, 'L')
-	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Total SNPs Passing QC: ", 0, 1, 'L')
-	pdf.multi_cell(0, 8, "Data Summary", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total SNPs Passing QC:  "+str(num_snps_qc_pass), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "\n\n\n\n\n", 0, 1, 'L')
+	pdf.set_font('Arial', 'B', 16)
+	pdf.multi_cell(0, 8, "Data Summary", 1, 'L', True)
+	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
 	# this is the total number of snps released samples x snps
-	pdf.multi_cell(0, 8, "Total Genotypes Passing QC: ", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total Genotypes Passing QC: ", 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Percent Missing Data: ", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Percent Missing Data: ", 1, 1, 'L')
 
 
 
@@ -90,7 +104,6 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 	for key in temp_remove:
 		samples_to_remove_text.write(str(temp_remove[key][0]) + '\t' + str(key) + '\n')
 	samples_to_remove_text.flush() # flushes out buffer
-
 
 
 	def check_GC_callrate(sampleInfo):
