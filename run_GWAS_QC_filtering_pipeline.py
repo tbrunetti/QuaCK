@@ -26,25 +26,25 @@ class Pipeline(BasePipeline):
 		}
 
 	def add_pipeline_args(self, parser):
-		parser.add_argument('-sampleTable', required=True, help="[REQUIRED] Full path to text file of Illumina sample table metrics tab-delimited")
-		parser.add_argument('-snpTable', required=True, help="[REQUIRED] Full path to text file of Illumina SNP table tab-delimited")
-		parser.add_argument('-inputPLINK', required=True, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
-		parser.add_argument('--arrayType', default='MEGAex with Custom Content', help='Name of array or chip used for SNPs')
-		parser.add_argument('--outDir', default=os.getcwd(), help='[default:current working directory] Full path to output directory, (note a new directory is made in this directory')
-		parser.add_argument('--projectName', default='test', help="Name of project or owner of project")
-		parser.add_argument('--callrate', default=0.97, help="[default:0.991] minimum call rate to be included in sample set")
-		parser.add_argument('--snp_callrate', default=0.97, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
-		parser.add_argument('--clusterSep', default=0.30, help='[default:0.30] mimimum allowable cluster separation value in order for SNP to be retained (anything equal to or below this value is removed')
+		parser.add_argument('-sampleTable', required=True, type=str, help="[REQUIRED] Full path to text file of Illumina sample table metrics tab-delimited")
+		parser.add_argument('-snpTable', required=True, type=str, help="[REQUIRED] Full path to text file of Illumina SNP table tab-delimited")
+		parser.add_argument('-inputPLINK', required=True, type=str, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
+		parser.add_argument('--arrayType', default='MEGAex with Custom Content', type=str, help='Name of array or chip used for SNPs')
+		parser.add_argument('--outDir', default=os.getcwd(), type=str, help='[default:current working directory] Full path to output directory, (note a new directory is made in this directory')
+		parser.add_argument('--projectName', default='test', type=str, help="Name of project or owner of project")
+		parser.add_argument('--callrate', default=0.97, type=float, help="[default:0.991] minimum call rate to be included in sample set")
+		parser.add_argument('--snp_callrate', default=0.97, type=float, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
+		parser.add_argument('--clusterSep', default=0.30, type=float, help='[default:0.30] mimimum allowable cluster separation value in order for SNP to be retained (anything equal to or below this value is removed')
 		parser.add_argument('--AATmean', default=0.30, help='[default:0.30] maximum allowable AA T mean threshold in order for SNP to be retained (anything above this value is removed')
-		parser.add_argument('--AATdev', default=0.06, help='[default:0.06] maximum allowable AA T dev threshold in order for SNP to be retained (anything above this value is removed)')
-		parser.add_argument('--BBTmean', default=0.70, help='[default:0.70] minimum allowable BB T mean threshold in order for SNP to be retained (anything below this value is removed)')
-		parser.add_argument('--BBTdev', default=0.06, help='[default:0.06] maximum allowable BB T dev threshold in order for SNP to be retained (anything above this value is removed)')
-		parser.add_argument('--AARmean', default=0.20, help='[default:0.20] minimum allowable AA R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
-		parser.add_argument('--ABRmean', default=0.20, help='[default:0.20] minimum allowable AB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
-		parser.add_argument('--BBRmean', default=0.20, help='[default:0.20] minimum allowable BB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
-		parser.add_argument('--genome_build', default='b37-hg19', help='[default:b37-hg19], genome build options: b36-hg18, b37-hg19, b38-hg38')
-		parser.add_argument('--maxFemale', default=0.20, help='[default:0.20] F scores below this value will be imputed as female subjects based on X-chromosome imputation')
-		parser.add_argument('--minMale', default=0.80, help='[default:0.80] F scores above this value will be imputed as male subjects based on X-chromosome imputation')
+		parser.add_argument('--AATdev', default=0.06, type=float, help='[default:0.06] maximum allowable AA T dev threshold in order for SNP to be retained (anything above this value is removed)')
+		parser.add_argument('--BBTmean', default=0.70, type=float, help='[default:0.70] minimum allowable BB T mean threshold in order for SNP to be retained (anything below this value is removed)')
+		parser.add_argument('--BBTdev', default=0.06, type=float, help='[default:0.06] maximum allowable BB T dev threshold in order for SNP to be retained (anything above this value is removed)')
+		parser.add_argument('--AARmean', default=0.20, type=float, help='[default:0.20] minimum allowable AA R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
+		parser.add_argument('--ABRmean', default=0.20, type=float, help='[default:0.20] minimum allowable AB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
+		parser.add_argument('--BBRmean', default=0.20, type=float, help='[default:0.20] minimum allowable BB R mean threshold in order for SNP to be retained (anything equal to or below this value is removed)')
+		parser.add_argument('--genome_build', default='b37-hg19', type=str, help='[default:b37-hg19], genome build options: b36-hg18, b37-hg19, b38-hg38')
+		parser.add_argument('--maxFemale', default=0.20, type=float, help='[default:0.20] F scores below this value will be imputed as female subjects based on X-chromosome imputation')
+		parser.add_argument('--minMale', default=0.80, type=float, help='[default:0.80] F scores above this value will be imputed as male subjects based on X-chromosome imputation')
 	
 
 	@staticmethod
@@ -114,7 +114,7 @@ class Pipeline(BasePipeline):
 		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		remove_samples, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
+		sample_qc_table, remove_samples, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		illumina_snps_to_remove = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
 					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
@@ -170,10 +170,11 @@ class Pipeline(BasePipeline):
 			)
 
 		# not imbedded in Illumina Sample check because uses own input files
-		stage_for_deletion = generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', outDir=outdir, cleanup=stage_for_deletion)
+		stage_for_deletion = generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
 		# checks sex and call rate at the batch level
 		stage_for_deletion = generate_report.batch_effects(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'.imiss', outDir=outdir, cleanup=stage_for_deletion)
 		
+
 
 	
 		#----ROUND 2 SNP QC-------
