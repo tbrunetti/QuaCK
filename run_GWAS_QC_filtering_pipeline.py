@@ -104,16 +104,17 @@ class Pipeline(BasePipeline):
 
 		
 		# write thresholds and parameters to PDF file
-		pdf = FPDF()
-		generate_report.thresholds_and_parameters(pdf=pdf, params=pipeline_args)
+		pdf_thresh = FPDF()
+		generate_report.thresholds_and_parameters(pdf=pdf_thresh, params=pipeline_args)
 		# a list of files to remove once pipeline in finished running, clean up purposes
 		stage_for_deletion = []
 		
-		
+		# write bulk analysis and statistics data to this file
+		pdf = FPDF()
 		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		remove_samples = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir)
+		remove_samples, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		illumina_snps_to_remove = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
 					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
@@ -169,9 +170,9 @@ class Pipeline(BasePipeline):
 			)
 
 		# not imbedded in Illumina Sample check because uses own input files
-		generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', outDir=outdir)
+		stage_for_deletion = generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', outDir=outdir, cleanup=stage_for_deletion)
 		# checks sex and call rate at the batch level
-		generate_report.batch_effects(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'.imiss', outDir=outdir)
+		stage_for_deletion = generate_report.batch_effects(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'.imiss', outDir=outdir, cleanup=stage_for_deletion)
 		
 
 	
@@ -198,15 +199,25 @@ class Pipeline(BasePipeline):
 		pdf_title.output(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf', 'F')
 		pdf.output(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf', 'F')
 		pdf_summary_page.output(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf', 'F')
+		pdf_thresh.output(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf', 'F')
+		# create PDF merge object and write final PDF as project name with '_final_report.pdf' as suffix
+		pdf_merger = PyPDF2.PdfFileMerger()
+		pdf_merger.append(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf')
+		pdf_merger.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
+		pdf_merger.append(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf')
+		pdf_merger.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
+		pdf_merger.append('Parameter_Definitions.pdf')
+		pdf_merger.write(outdir + '/'+pipeline_args['projectName']+'_final_report.pdf')
+		pdf_merger.close()
 
-
+		
+		# remove extraneous intermediate files
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
+		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 
-
-
-
-
-
-		# at very end call generate_report
+		# actually remove files in stage_for_deletion
+		print '\n\n\n' + "Cleaning up project directory"
+		for files in stage_for_deletion:
+			subprocess.call(['rm', '-rf', files])
