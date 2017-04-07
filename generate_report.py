@@ -6,6 +6,8 @@ import statistics as stats
 import collections
 import numpy as np
 import seaborn as sns
+import warnings
+
 
 
 # this method will be called last so everything can be calculated
@@ -71,6 +73,7 @@ def thresholds_and_parameters(pdf, params):
 
 
 def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
+	warnings.simplefilter(action = "ignore", category = FutureWarning)
 	print "Running Illumina Sample QC..."
 	samples_to_remove_text = open(outDir+'/'+'samples_to_remove.txt', 'w')
 	pdf.add_page()
@@ -93,15 +96,15 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	pdf.set_font('Arial', 'B', 16)
 	pdf.multi_cell(0, 8, "Number of samples passing missing call rate threshold:  "+str(total_samples-len(samples_to_remove)), 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
-	pdf.set_x(40)
+	pdf.set_x(30)
 	pdf.multi_cell(0, 8, 'Median call rate:  '+str(basic_call_stats[0]), 1, 1, 'L')
-	pdf.set_x(40)
+	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Mean call rate:  "+ str(basic_call_stats[1]), 1, 1, 'L')
-	pdf.set_x(40)
+	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Standard deviation call rate:  "+ str(basic_call_stats[2]), 1, 1, 'L')
-	pdf.set_x(40)
+	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Minimum call rate:  "+ str(basic_call_stats[3]), 1, 1, 'L')
-	pdf.set_x(40)
+	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str(basic_call_stats[4]), 1, 1, 'L')
 	
 
@@ -113,6 +116,8 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 
 
 	def check_GC_callrate(sampleInfo, cleanup):
+		warnings.simplefilter(action = "ignore", category = FutureWarning)
+
 		sample_quality_graph = sns.jointplot('Call Rate','p10 GC', data=sampleInfo, kind="reg")
 		sns.plt.suptitle('Overall Sample Quality')
 		sns.plt.tight_layout(pad=2, w_pad=2, h_pad=2)
@@ -121,55 +126,16 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 		pdf.image(outDir+'/'+"sample_gccallrate.png", x=20, y=120, w=170)
 		cleanup.append(outDir+'/'+"sample_gccallrate.png")  # puts image in line for deletion; happens after final PDF has been generated
 	
-	def check_ethnicity(sampleInfo, cleanup):
-		pdf.add_page()
-		pdf.set_margins(20, 10, 20)
-		# ethnicity and race breakdown
-		sampleInfo['RACE'].replace(np.nan, 'NaN', regex=True, inplace=True) # converts pandas nans into strings (by default they are ints)
-		sampleInfo['RACE'].value_counts(dropna=False).plot(kind='pie', autopct='%.2f', fontsize=16)
-		plt.axis('equal')
-		plt.savefig(outDir+'/'+'ethinic_breakdown.png', bbox_inches='tight')
-		plt.close()
-		pdf.image(outDir+'/'+'ethinic_breakdown.png', x=20, y=130, w=130)
-		cleanup.append(outDir+'/'+'ethinic_breakdown.png')  # puts image in line for deletion; happens after final PDF has been generated
-		
-		all_samples_ethnicity = dict(sampleInfo['RACE'].value_counts(dropna=True)) # creates the value counts of ethnicity into dictionary for easy PDF writing key=eth; value=total samples
-
-
-		store_removal_ethnicity = []
-		for i in samples_to_remove:
-			 store_removal_ethnicity.append(list(sampleInfo.loc[sampleInfo['Sample ID'] == i]['RACE']))
-		store_removal_ethnicity = [store_removal_ethnicity[i][0] for i in range(0, len(store_removal_ethnicity))]
-		ethnicity_removals = collections.Counter(store_removal_ethnicity)
-		
-		pdf.set_font('Arial', 'B', 20)
-		pdf.multi_cell(0, 30, "Race and Ethnicity Distribution", 0, 1, 'L')
-		pdf.line(20, 32, 190, 32)
-		pdf.set_font('Arial', '', 16)
-		pdf.multi_cell(0, 10, 'Ethnic Background of all samples:', 0, 1, 'L')
-		
-		for key in all_samples_ethnicity: # writes out to PDF of number of samples in each ethnic group
-			pdf.set_x(40)
-			pdf.multi_cell(0, 8, str(key)+':  '+str(all_samples_ethnicity[key]), 0, 1, 'L')
-		
-		pdf.multi_cell(0, 10, 'Ethnic Background of removed samples:', 0, 1, 'L')
-		for key in ethnicity_removals: # write out to PDF the ethnic backgrounds of the removed samples
-			pdf.set_x(40)
-			pdf.multi_cell(0, 8, str(key)+':  '+str(ethnicity_removals[key]), 0, 1, 'L')		
-
-
+	
 	check_GC_callrate(sampleInfo=sample_qc_table, cleanup=cleanup)
-	check_ethnicity(sampleInfo=sample_qc_table, cleanup=cleanup)
 
-	return samples_to_remove_text, cleanup
-
-def graph_missingness(sample, snp, pdf, outDir):
-	pass;
+	return sample_qc_table, samples_to_remove_text, cleanup
 
 
 
+def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
+	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
-def graph_sexcheck(pdf, sexcheck, outDir, cleanup):
 	print "checking sex concordance"
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
@@ -186,7 +152,7 @@ def graph_sexcheck(pdf, sexcheck, outDir, cleanup):
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'sample_sex.png', bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"sample_sex.png", x=20, y=35, w=79, h=85)
+	pdf.image(outDir+'/'+"sample_sex.png", x=20, y=85, w=79, h=85)
 	cleanup.append(outDir+'/'+"sample_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
@@ -195,7 +161,7 @@ def graph_sexcheck(pdf, sexcheck, outDir, cleanup):
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'imputed_sex.png', bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=35, w=79, h=85)
+	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=85, w=79, h=85)
 	cleanup.append(outDir+'/'+"imputed_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
@@ -205,12 +171,31 @@ def graph_sexcheck(pdf, sexcheck, outDir, cleanup):
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'discrepencies_sex.png', bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"discrepencies_sex.png", x=20, y=130, w=79, h=85)
+	pdf.image(outDir+'/'+"discrepencies_sex.png", x=20, y=190, w=79, h=85)
 	cleanup.append(outDir+'/'+"discrepencies_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 	
+
+	# determines which discrepenices are probably human error prone versus sample quality error
+	problem_calls_only = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['PROBLEM'])]
+	concordant_calls = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['OK'])]
+	fixed_sex = list(problem_calls_only[(problem_calls_only['F'] >= minM) | (problem_calls_only['F'] <= maxF)]['IID'])
+	indeterminate_sex = list(problem_calls_only[(problem_calls_only['F'] < minM) | (problem_calls_only['F'] > maxF)]['IID'])
+	pdf.set_font('Arial', 'B', 16)
+	pdf.set_fill_color(200)
+	pdf.multi_cell(0, 10, 'Total Number of Concordant Samples:  ' +  str(len(concordant_calls.index)), 1, 'L', True)
+	pdf.multi_cell(0, 10, 'Total Number of Discrepencies:  '+str(len(fixed_sex + indeterminate_sex)), 1, 'L', True)
+	pdf.set_font('Arial', '', 16)
+	pdf.set_x(30)
+	pdf.multi_cell(0, 10, '# of samples that need to be fixed:  '+str(len(fixed_sex)), 1, 1, 'L')
+	pdf.set_x(30)
+	pdf.multi_cell(0, 10, '# of samples that need to be removed:  '+str(len(indeterminate_sex)), 1, 1, 'L')
+
+
 	return cleanup
 
 def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
+	warnings.simplefilter(action = "ignore", category = FutureWarning)
+
 	# sex concordance between batches
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
@@ -236,8 +221,12 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 			print 'BATCH ID [' + str(batch) + '] not formatted properly!'
 	
 	
-	pdf.set_font('Arial', '', 16)
-	pdf.multi_cell(0, 10, 'Total Number of Batches:  ' +  str(len(batch_sex)), 0, 1, 'L')
+	pdf.set_font('Arial', 'B', 16)
+	pdf.set_fill_color(200)
+	pdf.multi_cell(0, 10, 'Total Number of Batches:  ' +  str(len(batch_sex)), 1, 'L', True)
+	pdf.multi_cell(0, 10, 'Batch Sample Missingness Statistics:  ', 1, 'L', True)
+
+
 	# missingness data format data for seaborn boxplot/strip plot
 	all_batch_callrate = []
 	for key in batch_missing:
@@ -254,6 +243,25 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 	plt.close()
 	pdf.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=130, w=190, h=150)
 	cleanup.append(outDir+'/'+'missing_call_rate_samples.png')  # puts image in line for deletion; happens after final PDF has been generated
+
+	
+	# get sample missingness statistics across batches
+	batch_call_averages = []
+	batch_call_averages_paired = {}
+	for batch_name in batch_missing:
+		temp = missing_call_dataframe.loc[missing_call_dataframe['batch'].isin([batch_name])]
+		batch_call_averages.append(temp['missing call rate'].mean())
+		batch_call_averages_paired[batch_name] = temp['missing call rate'].mean() 
+	pdf.set_font('Arial', '', 14)
+	pdf.set_x(40)
+	pdf.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages)*100, 2))+'%', 1, 1, 'L') 
+	pdf.set_x(40)
+	pdf.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages)*100, 2)), 1, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
+
 
 	# outputs graphs and statistics per batch based on sex	
 	for key in batch_sex:
@@ -359,3 +367,58 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 			cleanup.append(outDir+'/'+"problem_columns"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
 	return cleanup
+
+
+def sample_phenotype_overview_post_cleanup(sampleInfo, cleanup):
+# sampleInfo is the same table generated and returned from the illumina_sample_overview() method
+	
+
+	def check_ethnicity(sampleInfo, cleanup):
+		warnings.simplefilter(action = "ignore", category = FutureWarning)
+
+		pdf.add_page()
+		pdf.set_margins(20, 10, 20)
+		# ethnicity and race breakdown
+		sampleInfo['RACE'].replace(np.nan, 'NaN', regex=True, inplace=True) # converts pandas nans into strings (by default they are ints)
+		sampleInfo['RACE'].value_counts(dropna=False).plot(kind='pie', autopct='%.2f', fontsize=16)
+		plt.axis('equal')
+		plt.savefig(outDir+'/'+'ethinic_breakdown.png', bbox_inches='tight')
+		plt.close()
+		pdf.image(outDir+'/'+'ethinic_breakdown.png', x=20, y=130, w=130)
+		cleanup.append(outDir+'/'+'ethinic_breakdown.png')  # puts image in line for deletion; happens after final PDF has been generated
+		
+		all_samples_ethnicity = dict(sampleInfo['RACE'].value_counts(dropna=True)) # creates the value counts of ethnicity into dictionary for easy PDF writing key=eth; value=total samples
+
+
+		store_removal_ethnicity = []
+		for i in samples_to_remove:
+			 store_removal_ethnicity.append(list(sampleInfo.loc[sampleInfo['Sample ID'] == i]['RACE']))
+		store_removal_ethnicity = [store_removal_ethnicity[i][0] for i in range(0, len(store_removal_ethnicity))]
+		ethnicity_removals = collections.Counter(store_removal_ethnicity)
+		
+		pdf.set_font('Arial', 'B', 20)
+		pdf.multi_cell(0, 30, "Race and Ethnicity Distribution", 0, 1, 'L')
+		pdf.line(20, 32, 190, 32)
+		pdf.set_font('Arial', '', 16)
+		pdf.multi_cell(0, 10, 'Ethnic Background of all samples:', 0, 1, 'L')
+		
+		for key in all_samples_ethnicity: # writes out to PDF of number of samples in each ethnic group
+			pdf.set_x(40)
+			pdf.multi_cell(0, 8, str(key)+':  '+str(all_samples_ethnicity[key]), 0, 1, 'L')
+		
+		pdf.multi_cell(0, 10, 'Ethnic Background of removed samples:', 0, 1, 'L')
+		for key in ethnicity_removals: # write out to PDF the ethnic backgrounds of the removed samples
+			pdf.set_x(40)
+			pdf.multi_cell(0, 8, str(key)+':  '+str(ethnicity_removals[key]), 0, 1, 'L')	
+			check_ethnicity(sampleInfo=sample_qc_table, cleanup=cleanup)
+
+		return cleanup
+	
+	# this is from .fam file
+	def sex_distribution(cleanup):
+		pass;
+
+	# this is from .fam file
+	def affection(cleanup):
+		pass;
+
