@@ -62,6 +62,7 @@ def thresholds_and_parameters(pdf, params):
 	pdf.add_page()
 	pdf.set_margins(20, 10, 20)
 	pdf.set_font('Arial', 'B', 30)
+	pdf.set_x(20)
 	pdf.multi_cell(0, 30, "Parameters and Thresholds", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	pdf.set_font('Arial', '', 16)
@@ -69,7 +70,7 @@ def thresholds_and_parameters(pdf, params):
 		pdf.multi_cell(0, 8, str(key)+':     '+str(params[key]), 0, 1, 'L')
 
 
-def illumina_sample_overview(inputFile, pdf, callrate, outDir):
+def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	print "Running Illumina Sample QC..."
 	samples_to_remove_text = open(outDir+'/'+'samples_to_remove.txt', 'w')
 	pdf.add_page()
@@ -82,21 +83,26 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 	# retrieve sample ids of those with missing call rage less than call rate parameter provided by user; default = 0.991
 	samples_to_remove = list(sample_qc_table[sample_qc_table['Call Rate'] < callrate]['Sample ID'])
 	basic_call_stats = [stats.median(sample_qc_table['Call Rate']), stats.mean(sample_qc_table['Call Rate']), stats.stdev(sample_qc_table['Call Rate']), min(sample_qc_table['Call Rate']), max(sample_qc_table['Call Rate'])]
+	pdf.set_x(20)
 	pdf.multi_cell(0, 30, "Sample Quality Assessment", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
+	pdf.set_fill_color(200)
+	pdf.set_font('Arial', 'B', 16)
+	pdf.multi_cell(0, 8, "Total samples analyzed:  "+str(total_samples), 1, 'L', True)
+	pdf.set_fill_color(200)
+	pdf.set_font('Arial', 'B', 16)
+	pdf.multi_cell(0, 8, "Number of samples passing missing call rate threshold:  "+str(total_samples-len(samples_to_remove)), 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
-	pdf.multi_cell(0, 8, "Total samples analyzed:  "+str(total_samples), 0, 1, 'L')
-	pdf.multi_cell(0, 8, "Number of samples passing missing call rate threshold:  " + str(total_samples-len(samples_to_remove)), 0, 1, 'L')	
 	pdf.set_x(40)
-	pdf.multi_cell(0, 8, "Median call rate:  "+ str(basic_call_stats[0]), 0, 1, 'L')
+	pdf.multi_cell(0, 8, 'Median call rate:  '+str(basic_call_stats[0]), 1, 1, 'L')
 	pdf.set_x(40)
-	pdf.multi_cell(0, 8, "Mean call rate:  "+ str(basic_call_stats[1]), 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Mean call rate:  "+ str(basic_call_stats[1]), 1, 1, 'L')
 	pdf.set_x(40)
-	pdf.multi_cell(0, 8, "Standard deviation call rate:  "+ str(basic_call_stats[2]), 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Standard deviation call rate:  "+ str(basic_call_stats[2]), 1, 1, 'L')
 	pdf.set_x(40)
-	pdf.multi_cell(0, 8, "Minimum call rate:  "+ str(basic_call_stats[3]), 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Minimum call rate:  "+ str(basic_call_stats[3]), 1, 1, 'L')
 	pdf.set_x(40)
-	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str(basic_call_stats[4]), 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str(basic_call_stats[4]), 1, 1, 'L')
 	
 
 	# create a files called "samples_to_remove.txt" to be passed in proper format to plink for sample removal
@@ -106,16 +112,16 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 	samples_to_remove_text.flush() # flushes out buffer
 
 
-	def check_GC_callrate(sampleInfo):
+	def check_GC_callrate(sampleInfo, cleanup):
 		sample_quality_graph = sns.jointplot('Call Rate','p10 GC', data=sampleInfo, kind="reg")
 		sns.plt.suptitle('Overall Sample Quality')
 		sns.plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 		sns.plt.savefig(outDir+'/'+'sample_gccallrate.png')
 		plt.close()
 		pdf.image(outDir+'/'+"sample_gccallrate.png", x=20, y=120, w=170)
-
+		cleanup.append(outDir+'/'+"sample_gccallrate.png")  # puts image in line for deletion; happens after final PDF has been generated
 	
-	def check_ethnicity(sampleInfo):
+	def check_ethnicity(sampleInfo, cleanup):
 		pdf.add_page()
 		pdf.set_margins(20, 10, 20)
 		# ethnicity and race breakdown
@@ -125,6 +131,7 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 		plt.savefig(outDir+'/'+'ethinic_breakdown.png', bbox_inches='tight')
 		plt.close()
 		pdf.image(outDir+'/'+'ethinic_breakdown.png', x=20, y=130, w=130)
+		cleanup.append(outDir+'/'+'ethinic_breakdown.png')  # puts image in line for deletion; happens after final PDF has been generated
 		
 		all_samples_ethnicity = dict(sampleInfo['RACE'].value_counts(dropna=True)) # creates the value counts of ethnicity into dictionary for easy PDF writing key=eth; value=total samples
 
@@ -151,10 +158,10 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir):
 			pdf.multi_cell(0, 8, str(key)+':  '+str(ethnicity_removals[key]), 0, 1, 'L')		
 
 
-	check_GC_callrate(sampleInfo=sample_qc_table)
-	check_ethnicity(sampleInfo=sample_qc_table)
+	check_GC_callrate(sampleInfo=sample_qc_table, cleanup=cleanup)
+	check_ethnicity(sampleInfo=sample_qc_table, cleanup=cleanup)
 
-	return samples_to_remove_text
+	return samples_to_remove_text, cleanup
 
 def graph_missingness(sample, snp, pdf, outDir):
 	pass;
@@ -162,7 +169,7 @@ def graph_missingness(sample, snp, pdf, outDir):
 
 
 
-def graph_sexcheck(pdf, sexcheck, outDir):
+def graph_sexcheck(pdf, sexcheck, outDir, cleanup):
 	print "checking sex concordance"
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
@@ -180,6 +187,7 @@ def graph_sexcheck(pdf, sexcheck, outDir):
 	plt.savefig(outDir+'/'+'sample_sex.png', bbox_inches='tight')
 	plt.close()
 	pdf.image(outDir+'/'+"sample_sex.png", x=20, y=35, w=79, h=85)
+	cleanup.append(outDir+'/'+"sample_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
 	sns.plt.suptitle('Sex and F coefficient based on imputed sex data')
@@ -188,6 +196,7 @@ def graph_sexcheck(pdf, sexcheck, outDir):
 	plt.savefig(outDir+'/'+'imputed_sex.png', bbox_inches='tight')
 	plt.close()
 	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=35, w=79, h=85)
+	cleanup.append(outDir+'/'+"imputed_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
 	sns.plt.suptitle('Discrepencies between imputed and pedigree data')
@@ -197,10 +206,11 @@ def graph_sexcheck(pdf, sexcheck, outDir):
 	plt.savefig(outDir+'/'+'discrepencies_sex.png', bbox_inches='tight')
 	plt.close()
 	pdf.image(outDir+'/'+"discrepencies_sex.png", x=20, y=130, w=79, h=85)
-
+	cleanup.append(outDir+'/'+"discrepencies_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 	
+	return cleanup
 
-def batch_effects(pdf, sexcheck, missingness, outDir):
+def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 	# sex concordance between batches
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
@@ -243,6 +253,7 @@ def batch_effects(pdf, sexcheck, missingness, outDir):
 	plt.savefig(outDir+'/'+'missing_call_rate_samples.png')
 	plt.close()
 	pdf.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=130, w=190, h=150)
+	cleanup.append(outDir+'/'+'missing_call_rate_samples.png')  # puts image in line for deletion; happens after final PDF has been generated
 
 	# outputs graphs and statistics per batch based on sex	
 	for key in batch_sex:
@@ -263,6 +274,7 @@ def batch_effects(pdf, sexcheck, missingness, outDir):
 		plt.savefig(outDir+'/'+'sample_sex'+str(key)+'.png', bbox_inches='tight')
 		plt.close()
 		pdf.image(outDir+'/'+"sample_sex"+str(key)+'.png', x=20, y=85, w=79, h=85)
+		cleanup.append(outDir+'/'+"sample_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
 		imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_batch_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
 		sns.plt.suptitle('Sex and F coefficient based on imputed sex data')
@@ -271,6 +283,8 @@ def batch_effects(pdf, sexcheck, missingness, outDir):
 		plt.savefig(outDir+'/'+'imputed_sex'+str(key)+'.png', bbox_inches='tight')
 		plt.close()
 		pdf.image(outDir+'/'+"imputed_sex"+str(key)+'.png', x=110, y=85, w=79, h=85)
+		cleanup.append(outDir+'/'+"imputed_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+
 
 		discrepencies_sex = sns.lmplot(x='rank', y='F', hue='Discrepencies', data=sorted_sex_batch_dataframe, fit_reg=False, palette={"OK":'black', "PROBLEM":'red'}, scatter_kws={"s": 20})
 		sns.plt.suptitle('Discrepencies between imputed and pedigree data')
@@ -279,6 +293,7 @@ def batch_effects(pdf, sexcheck, missingness, outDir):
 		plt.savefig(outDir+'/'+'discrepencies_sex'+str(key)+'.png', bbox_inches='tight')
 		plt.close()
 		pdf.image(outDir+'/'+"discrepencies_sex"+str(key)+'.png', x=20, y=190, w=79, h=85)
+		cleanup.append(outDir+'/'+"discrepencies_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
 		contradictions_headers = sorted_sex_batch_dataframe['Discrepencies'].value_counts().index.tolist()
 		contradictions = sorted_sex_batch_dataframe['Discrepencies'].value_counts()
@@ -340,3 +355,7 @@ def batch_effects(pdf, sexcheck, missingness, outDir):
 			plt.savefig(outDir+'/'+'problem_columns'+str(key)+'.png', bbox_inches='tight')
 			plt.close()
 			pdf.image(outDir+'/'+"problem_columns"+str(key)+'.png', x=110, y=230, w=79, h=42)
+			cleanup.append(outDir+'/'+'problem_rows'+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+			cleanup.append(outDir+'/'+"problem_columns"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+
+	return cleanup
