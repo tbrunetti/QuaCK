@@ -58,7 +58,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 			columns_for_analysis.append(BBRmean.group(0))
 
 	# snp failture stats across ALL chromosomes
-	print "		Calculating 5 summary statstics"
+	print "		Calculating five-number summary statstics"
 	all_stats = {}
 	for header_stats in columns_for_analysis:
 		all_stats[header_stats] = [stats.median(list(snp_qc_table[header_stats])), stats.mean(list(snp_qc_table[header_stats])), stats.stdev(list(snp_qc_table[header_stats])), 
@@ -112,106 +112,226 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	snps_to_remove_text.write('\n'.join(snps_to_remove))
 	snps_to_remove_text.flush()
 
-	
+	# calculate passing SNP stats for top table on page
+	autosomes_remain_table = autosomes_only.loc[~autosomes_only['Name'].isin(snps_to_remove)]
+	autosomes_remain = len(autosomes_remain_table.index)
+	print autosomes_remain
+	non_auto_remain_table = non_autosomes.loc[~non_autosomes['Name'].isin(snps_to_remove)]
+	non_auto_remain = len(non_auto_remain_table.index)
+	print non_auto_remain
+	missing_remain_table = missing_chr.loc[~missing_chr['Name'].isin(snps_to_remove)]
+	missing_remain = len(missing_remain_table.index)
+	print missing_remain
+
+
 
 	print "		Writing SNP QC to PDF"	
 	# create running title for SNP quality
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 30)
 	pdf.cell(0, 30, "SNP Quality Assessment", 0, 1, 'L')
-	pdf.line(10, 32, 210, 32)
-	pdf.set_font('Arial', '', 12)
+	pdf.line(20, 32, 190, 32)
+	pdf.set_fill_color(200)
+	pdf.set_font('Arial', 'B', 14)
 	# writes totals into PDF format
-	pdf.cell(0, 8, "Total SNPs analyzed:  "+str(total_snps), 0, 1, 'L')
-	pdf.set_x(20)
-	pdf.cell(0, 8, "Total autosomal SNPs analyzed:  "+str(total_autosomes), 0, 1, 'L')
-	pdf.set_x(20)
-	pdf.cell(0, 8, "Total non-autosomal SNPs analyzed:  "+str(total_non_autosomes), 0, 1, 'L')
-	pdf.set_x(20)
-	pdf.cell(0, 8, "Total missing chromosome ID SNPs analyzed:  "+str(total_missing_chr), 0, 1, 'L')
-	pdf.cell(0, 8, "Total SNPs passing QC:  "+str(total_snps - len(snps_to_remove)) + ' ' + 
-			'('+str(float(total_snps - len(snps_to_remove))/float(total_snps))+'%)' , 0, 1, 'L')
-	
+	pdf.multi_cell(0, 8, "Total SNPs analyzed:  "+str(total_snps), 1, 'L', True)
+	pdf.set_font('Arial', '', 14)
+	pdf.set_x(40)
+	pdf.multi_cell(0, 8, "Total autosomal SNPs analyzed:  "+str(total_autosomes), 1, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 8, "Total non-autosomal SNPs analyzed:  "+str(total_non_autosomes), 1, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 8, "Total missing chromosome ID SNPs analyzed:  "+str(total_missing_chr), 1, 1, 'L')
+	pdf.set_font('Arial', 'B', 14)
+	pdf.multi_cell(0, 8, "Total SNPs passing QC:  "+str(total_snps - len(snps_to_remove)) + ' ' + 
+			'('+str((float(total_snps - len(snps_to_remove))/float(total_snps)) * 100)+'%)' , 1, 'L', True)
+	pdf.set_font('Arial', '', 14)
+	pdf.set_x(40)
+	pdf.multi_cell(0, 8, "Autosomal SNPs remaining:  "+str(autosomes_remain) + ' (' +str((float(autosomes_remain)/float(total_autosomes))*100)+'%)', 1, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 8, "Non-autosomal SNPs remaining:  "+str(non_auto_remain) + ' (' +str((float(non_auto_remain)/float(total_non_autosomes))*100)+'%)', 1, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 8, "Missing chromosome ID SNPs remaining:  "+str(missing_remain) + ' (' +str((float(missing_remain)/float(total_missing_chr))*100)+'%)', 1, 1, 'L')
+	pdf.multi_cell(0, 8, '\n\n\n', 0, 1, 'L')
 	
 
 
 	# write cluster sep stats 
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 10, "Cluster Separation Statistics", 0, 1, 'L')
+	pdf.multi_cell(0, 10, "Cluster Separation Statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
-	pdf.cell(0, 8, "Total SNPs passing cluster separation threshold:  "+str(total_snps_passing_callrate) + '  ' 
-			+ '('+str((float(total_snps_passing_callrate)/float(total_autosomes))*100)+'%)', 0, 1, 'L')
-	pdf.set_x(20)
-	pdf.cell(0, 8, "Median autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[0]), 0, 1, 'L')
-	pdf.set_x(20)
-	pdf.cell(0, 8, "Mean autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[1]), 0, 1, 'L')
-	pdf.set_x(20)	
-	pdf.cell(0, 8, "Standard deviation autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[2]), 0, 1, 'L')
-	pdf.set_x(20)
-	pdf.cell(0, 8, "Minimum autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[3]), 0, 1, 'L')
-	pdf.set_x(20)
-	pdf.cell(0, 8, "Maximum autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[4]), 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total SNPs passing cluster separation threshold:  "+str(total_snps_passing_clust) + '  ' 
+			+ '('+str((float(total_snps_passing_clust)/float(total_snps))*100)+'%)', 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median cluster separation:  "+ str(all_stats[clus_sep.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean cluster separation:  "+ str(all_stats[clus_sep.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of cluster separation:  "+ str(all_stats[clus_sep.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum cluster separation:  "+ str(all_stats[clus_sep.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum cluster sep:  "+ str(all_stats[clus_sep.group(0)][4]), 0, 1, 'L')
+	
 	
 	# write call rate score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "call rate score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "Call rate score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total autosomal SNPs passing call rate threshold:  "+str(total_autosomes - len(autosomal_snps_fail_callrate)) + '  ' 
 			+ '('+str((float(total_autosomes - len(autosomal_snps_fail_callrate))/float(total_autosomes))*100)+'%)', 0, 1, 'L')
-
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[4]), 0, 1, 'L')
 
 	# write AA_T mean score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "AA T mean score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "AA T mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA T mean threshold:  "+str(total_snps_passing_AATmean) + '  ' 
 			+ '('+str((float(total_snps_passing_AATmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median normalized AA theta mean:  "+ str(all_stats[AATmean.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean normalized AA theta mean:  "+ str(all_stats[AATmean.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of normalized AA theta mean:  "+ str(all_stats[AATmean.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum normalized AA theta mean:  "+ str(all_stats[AATmean.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum normalized AA theta mean:  "+ str(all_stats[AATmean.group(0)][4]), 0, 1, 'L')
 
 
 	# write AA_T dev score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "AA T dev score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "AA T dev score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA T dev threshold:  "+str(total_snps_passing_AATdev) + '  ' 
 			+ '('+str((float(total_snps_passing_AATdev)/float(total_snps))*100)+'%)', 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median normalized AA theta deviation:  "+ str(all_stats[AATdev.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean normalized AA theta deviation:  "+ str(all_stats[AATdev.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of normalized AA theta deviation:  "+ str(all_stats[AATdev.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum normalized AA theta deviation:  "+ str(all_stats[AATdev.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum normalized AA theta deviation:  "+ str(all_stats[AATdev.group(0)][4]), 0, 1, 'L')
+
 
 
 	# write BB_T mean score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "BB T mean score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "BB T mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB T mean threshold:  "+str(total_snps_passing_BBTmean) + '  ' 
 			+ '('+str((float(total_snps_passing_BBTmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median normalized BB theta mean:  "+ str(all_stats[BBTmean.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean normalized BB theta mean:  "+ str(all_stats[BBTmean.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of normalized BB theta mean:  "+ str(all_stats[BBTmean.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum normalized BB theta mean:  "+ str(all_stats[BBTmean.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum normalized BB theta mean:  "+ str(all_stats[BBTmean.group(0)][4]), 0, 1, 'L')
+
+
 
 	# write BB_T dev score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "BB T dev score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "BB T dev score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB T dev threshold:  "+str(total_snps_passing_BBTdev) + '  ' 
 			+ '('+str((float(total_snps_passing_BBTdev)/float(total_snps))*100)+'%)', 0, 1, 'L')
 
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median normalized BB theta deviation:  "+ str(all_stats[BBTdev.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean normalized BB theta deviation:  "+ str(all_stats[BBTdev.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of normalized BB theta deviation:  "+ str(all_stats[BBTdev.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum normalized BB theta deviation:  "+ str(all_stats[BBTdev.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum normalized BB theta deviation:  "+ str(all_stats[BBTdev.group(0)][4]), 0, 1, 'L')
+
+
 
 	# write AA R mean score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "AA R mean score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "AA R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA R mean threshold:  "+str(total_snps_passing_AARmean) + '  ' 
 			+ '('+str((float(total_snps_passing_AARmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median normalized AA intesity mean:  "+ str(all_stats[AARmean.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean normalized AA intesity mean:  "+ str(all_stats[AARmean.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of normalized AA intesity mean:  "+ str(all_stats[AARmean.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum normalized AA intesity mean:  "+ str(all_stats[AARmean.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum normalized AA intesity mean:  "+ str(all_stats[AARmean.group(0)][4]), 0, 1, 'L')
+
+
 
 
 	# write AB R mean score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "AB R mean score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "AB R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AB R mean threshold:  "+str(total_snps_passing_ABRmean) + '  ' 
 			+ '('+str((float(total_snps_passing_ABRmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median normalized AB intesity mean:  "+ str(all_stats[ABRmean.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean normalized AB intesity mean:  "+ str(all_stats[ABRmean.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of normalized AB intesity mean:  "+ str(all_stats[ABRmean.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum normalized AB intesity mean:  "+ str(all_stats[ABRmean.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum normalized AB intesity mean:  "+ str(all_stats[ABRmean.group(0)][4]), 0, 1, 'L')
+
 
 	# write BB R mean score stats
 	pdf.set_font('Arial', 'B', 14)
-	pdf.cell(0, 8, "BB R mean score statistics", 0, 1, 'L')
+	pdf.cell(0, 15, "BB R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB R mean threshold:  "+str(total_snps_passing_BBRmean) + '  ' 
 			+ '('+str((float(total_snps_passing_BBRmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median normalized BB intesity mean:  "+ str(all_stats[BBRmean.group(0)][0]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean normalized BB intesity mean:  "+ str(all_stats[BBRmean.group(0)][1]), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation of normalized BB intesity mean:  "+ str(all_stats[BBRmean.group(0)][2]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum normalized BB intesity mean:  "+ str(all_stats[BBRmean.group(0)][3]), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum normalized BB intesity mean:  "+ str(all_stats[BBRmean.group(0)][4]), 0, 1, 'L')
+
 
 	print "		...Finished writing SNP QC statistics..."	
 	return snps_to_remove_text
