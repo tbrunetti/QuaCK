@@ -5,22 +5,27 @@ import matplotlib.pyplot as plt
 import statistics as stats
 import collections
 import numpy as np
+import seaborn as sns
 
 def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, bbtdev, aarmean, abrmean, bbrmean, callrate, outDir):
 	print "Running Illumina SNP QC"
 	snps_to_remove_text = open(outDir+'/snps_to_remove.txt', 'w')
 	snp_qc_table = pandas.read_table(inputFile)
-	autosomes_only = snp_qc_table.loc[snp_qc_table['Chr'].isin(list(range(1,23)))] # make a dataframe for chromosomes 1-22 
-	non_autosomes = snp_qc_table.loc[~snp_qc_table['Chr'].isin(list(range(0,23)))] # make a dataframe for MT, X, Y, X*Y
-	missing_chr = snp_qc_table.loc[snp_qc_table['Chr'] == 0] # make a dataframe for chr 0 only (missing chr values)
-	
+	snp_qc_table[['Chr']] = snp_qc_table[['Chr']].astype(str)
+	chr_strings = [str(chrm) for chrm in range(1, 23)]
+	chr_strings_nonauto = [str(chrm) for chrm in range(0, 23)]
+	autosomes_only = snp_qc_table.loc[snp_qc_table['Chr'].isin(chr_strings)] # make a dataframe for chromosomes 1-22 
+	non_autosomes = snp_qc_table.loc[~snp_qc_table['Chr'].isin(chr_strings_nonauto)] # make a dataframe for MT, X, Y, X*Y
+	missing_chr = snp_qc_table.loc[snp_qc_table['Chr'] == '0'] # make a dataframe for chr 0 only (missing chr values)
+	chrX_only = non_autosomes.loc[non_autosomes['Chr'].isin(['X'])] #only make dataframe of chrX SNPs
 	
 	# calculates total number of snps analzyed and breaks down by category
 	total_snps = len(list(snp_qc_table['Name']))
 	total_autosomes = len(list(autosomes_only['Name']))
 	total_non_autosomes = len(list(non_autosomes['Name']))
 	total_missing_chr = len(list(missing_chr['Name']))
-	
+
+
 	columns_for_analysis = []
 	print "		Extracting headers needed for analysis"
 	# extract all header column names need to SNP analysis	
@@ -56,6 +61,36 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 		elif re.search('(.*(BB R Mean))', header):
 			BBRmean = re.search('(.*(BB R Mean))', header)
 			columns_for_analysis.append(BBRmean.group(0))
+
+	
+	# TESTING!!!!!!!  CALL RATE FOR X, Y, MITO FILTERING
+
+
+	non_auto_boxplot = non_autosomes.boxplot(column='Call Freq', by='Chr')
+	plt.show()
+	
+	a = chrX_only.boxplot(column='Call Freq', by='Chr', return_type='both', showfliers=True)
+	plt.show()
+
+	b = sns.boxplot(x='Chr', y='Call Freq', data=chrX_only)
+	sns.plt.show()
+
+	autosomes_only_boxplot = sns.boxplot(x='Chr', y='Call Freq', data=autosomes_only)
+	plt.show()
+
+
+	# remove non-autosomal SNPs below acceptable call rate
+	xChrm_snps_fail_callrate = list(chrX_only[chrX_only['Call Freq'] < float(callrate)]['Name'])
+	total_xchrm_snps_passing_callrate = len(list(chrX_only['Name'])) - len(xChrm_snps_fail_callrate)
+	print total_xchrm_snps_passing_callrate
+	print len(list(chrX_only['Name']))
+
+
+	# END OF TESTING!!!!!!!
+
+
+
+
 
 	# snp failture stats across ALL chromosomes
 	print "		Calculating five-number summary statstics"
@@ -106,22 +141,31 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	autosomal_snps_fail_callrate = list(autosomes_only[autosomes_only['Call Freq'] < float(callrate)]['Name'])
 	total_snps_passing_callrate = total_autosomes - len(autosomal_snps_fail_callrate)
 
+
+	# remove X chr SNPs below acceptable call rate
+	xChrm_snps_fail_callrate = list(chrX_only[chrX_only['Call Freq'] < float(callrate)]['Name'])
+	total_xchrm_snps_passing_callrate = len(list(chrX_only['Name'])) - len(xChrm_snps_fail_callrate)
+	print total_xchrm_snps_passing_callrate
+	print len(list(chrX_only['Name']))
+
+
 	# concatenate all failing SNPs
-	snps_to_remove = list(set(snps_fail_clus_sep + snps_fail_AATmean + snps_fail_AATdev + snps_fail_BBTmean + snps_fail_BBTdev + snps_fail_AARmean + snps_fail_ABRmean + snps_fail_BBRmean + autosomal_snps_fail_callrate))
+	snps_to_remove = list(set(snps_fail_clus_sep + snps_fail_AATmean + snps_fail_AATdev + snps_fail_BBTmean + snps_fail_BBTdev + snps_fail_AARmean + snps_fail_ABRmean + snps_fail_BBRmean + autosomal_snps_fail_callrate + xChrm_snps_fail_callrate))
 
 	snps_to_remove_text.write('\n'.join(snps_to_remove))
 	snps_to_remove_text.flush()
 
+	
 	# calculate passing SNP stats for top table on page
 	autosomes_remain_table = autosomes_only.loc[~autosomes_only['Name'].isin(snps_to_remove)]
 	autosomes_remain = len(autosomes_remain_table.index)
-	print autosomes_remain
+
 	non_auto_remain_table = non_autosomes.loc[~non_autosomes['Name'].isin(snps_to_remove)]
 	non_auto_remain = len(non_auto_remain_table.index)
-	print non_auto_remain
+
 	missing_remain_table = missing_chr.loc[~missing_chr['Name'].isin(snps_to_remove)]
 	missing_remain = len(missing_remain_table.index)
-	print missing_remain
+
 
 
 
@@ -192,6 +236,28 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.multi_cell(0, 5, "Minimum autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[3]), 0, 1, 'L')
 	pdf.set_x(40)
 	pdf.multi_cell(0, 5, "Maximum autosomal SNP call rate:  "+ str(stats_auto_snp_callrate[4]), 0, 1, 'L')
+
+	
+	# call rate statistics for X chromosome
+	pdf.set_font('Arial', 'B', 14)
+	pdf.cell(0, 15, "Chromosome X call rate score statistics", 0, 1, 'L')
+	pdf.set_font('Arial', '', 12)
+	pdf.cell(0, 8, "Total chromosome X SNPs passing call rate threshold:  "+str(total_xchrm_snps_passing_callrate) + '  ' 
+			+ '('+str((float(total_xchrm_snps_passing_callrate)/float(len(list(chrX_only['Name']))))*100)+'%)', 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Median chrX SNP call rate:  "+ str(stats.median(list(chrX_only['Call Freq']))), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Mean chrX SNP call rate:  "+ str(stats.mean(list(chrX_only['Call Freq']))), 0, 1, 'L')
+	pdf.set_x(40)	
+	pdf.multi_cell(0, 5, "Standard deviation autosomal chrX call rate:  "+ str(stats.stdev(list(chrX_only['Call Freq']))), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Minimum chrX SNP call rate:  "+ str(min(list(chrX_only['Call Freq']))), 0, 1, 'L')
+	pdf.set_x(40)
+	pdf.multi_cell(0, 5, "Maximum chrX SNP call rate:  "+ str(max(list(chrX_only['Call Freq']))), 0, 1, 'L')
+
+
+	
 
 	# write AA_T mean score stats
 	pdf.set_font('Arial', 'B', 14)
