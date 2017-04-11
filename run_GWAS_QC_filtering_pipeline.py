@@ -76,7 +76,28 @@ class Pipeline(BasePipeline):
 		else:
 			print "Specified build does not exist, please select different build (see -h for options)"
 
-	
+	@staticmethod
+	def separate_sexes(plinkFam, outDir):
+		females = open(outDir+'/females_by_ped.txt', 'w')
+		males = open(outDir+'/males_by_ped.txt', 'w')
+		unknown = open(outDir+'/unknown_by_ped.txt', 'w')
+		sample_info = pandas.read_table(plinkFam, delim_whitespace=True)
+		for row in range(0, len(sample_info)):
+			print 
+			if sample_info.iloc[row, 4]  == 1: #
+				males.write(str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]) +'\n')
+			elif sample_info.iloc[row, 4] == 2:
+				females.write(str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]) +'\n')
+			elif sample_info.iloc[row, 4] == 0: # unkown sex
+				unknown.write(str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]) +'\n')
+			else:
+				print str(sample_info[row, 1])+":  SKIPPING samples for SNP call rate sex analysis"
+
+		# ensure results are pushed out of buffer
+		females.flush()
+		males.flush()
+		unknown.flush()
+
 	def run_pipeline(self, pipeline_args, pipeline_config):
 	
 		# specifying output location and conflicting project names of files generated	
@@ -132,7 +153,16 @@ class Pipeline(BasePipeline):
 			inputPlinkfile=pipeline_args['inputPLINK'], plink=pipeline_config['plink']['path']
 			)
 
+		# makes text file lists of family and sample IDs based on self-identified sex
+		self.separate_sexes(
+			plinkFam=pipeline_args['inputPLINK'][:-4]+'.fam', outDir=outdir
+			)
+
+
+
 		#-----ROUND 1 SNP QC (Illumina recommended SNP metrics threhold removal)------
+
+		
 
 		# remove Illumina sample and SNP initial QC:
 		plink_general.run(
@@ -219,6 +249,6 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 
 		# actually remove files in stage_for_deletion
-		print '\n\n\n' + "Cleaning up project directory"
+		print '\n\n' + "Cleaning up project directory"
 		for files in stage_for_deletion:
 			subprocess.call(['rm', '-rf', files])
