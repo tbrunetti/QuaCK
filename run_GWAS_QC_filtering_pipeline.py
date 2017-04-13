@@ -4,11 +4,11 @@ import os
 import pandas
 import datetime
 import subprocess
+import statistics as stats
 from fpdf import FPDF
 sys.path.append(".")
 import generate_report
 import generate_illumina_snp_stats
-import snp_call_rate_modules
 import PyPDF2
 
 class Pipeline(BasePipeline):
@@ -80,25 +80,58 @@ class Pipeline(BasePipeline):
 
 	@staticmethod
 	def separate_sexes(plinkFam, outDir):
-		females = open(outDir+'/females_by_ped.txt', 'w')
-		males = open(outDir+'/males_by_ped.txt', 'w')
-		unknown = open(outDir+'/unknown_by_ped.txt', 'w')
+		females_and_unknowns = open(outDir+'/females_and_unknowns_by_ped.txt', 'w')
+		males_and_unknowns = open(outDir+'/males_and_unknowns_by_ped.txt', 'w')
+		unknowns_only = open(outDir+'/unknown_by_ped.txt', 'w')
 		sample_info = pandas.read_table(plinkFam, delim_whitespace=True)
 		for row in range(0, len(sample_info)):
 			print 
-			if sample_info.iloc[row, 4]  == 1: #
-				males.write('\n'+ str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]))
-			elif sample_info.iloc[row, 4] == 2:
-				females.write('\n'+ str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]))
+			if sample_info.iloc[row, 4]  == 1 or sample_info.iloc[row, 4] == 0: # also place unknowns in this file
+				males_and_unknowns.write('\n'+ str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]))
+			elif sample_info.iloc[row, 4] == 2 or sample_info.iloc[row, 4] == 0: # also place unknowns in this file
+				females_and_unknowns.write('\n'+ str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]))
 			elif sample_info.iloc[row, 4] == 0: # unkown sex
-				unknown.write('\n'+ str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]))
+				unknowns_only.write('\n'+ str(sample_info.iloc[row, 0]) + '\t' +str(sample_info.iloc[row, 1]))
 			else:
 				print str(sample_info[row, 1])+":  SKIPPING samples for SNP call rate sex analysis"
 
 		# ensure results are pushed out of buffer
-		females.flush()
-		males.flush()
-		unknown.flush()
+		females_and_unknowns.flush()
+		males_and_unknowns.flush()
+		unknowns_only.flush()
+
+	@staticmethod
+	def call_rate(missingnessSNP, missingnessSample, callrate, snps_to_remove, pdf, chrm):
+		missingness_snp = pandas.read_table(missingnessSNP, delim_whitespace=True)
+		samples = pandas.read_table(missingnessSample, delim_whitespace=True)
+		total_samples = len(list(samples['IID']))
+		total_snps = len(list(missingness_snp['SNP']))
+		snp_fails = list(missingness_snp[missingness_snp['F_MISS'] > (1-callrate)]['SNP']) # subtract 1 since parameter is minimum percent called 
+		snps_to_remove = snps_to_remove + snp_fails
+
+		# write this information to PDF
+		pdf.set_font('Arial', 'B', 14)
+		pdf.set_fill_color(200)
+		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs analyzed: " +str(total_snps), 1, 'L', True)
+		pdf.multi_cell(0, 8, "Total samples considered: " +str(total_samples), 1, 'L', True)
+		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs passing call rate threshold:  "+str(total_snps-len(snp_fails)) + '  ' 
+				+ '('+str((float(total_snps-len(snp_fails))/float(total_snps))*100)+'%)', 1, 'L', True)
+		pdf.set_font('Arial', '', 14)
+		pdf.multi_cell(0, 8, "Summary Stats on Original Data:", 1, 1, 'L')
+		pdf.set_x(40)
+		pdf.multi_cell(0, 8, "Median " + str(chrm) + " missing call rate:  "+ str(stats.median(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.set_x(40)
+		pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  "+ str(stats.mean(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.set_x(40)	
+		pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  "+ str(stats.stdev(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.set_x(40)
+		pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  "+ str(min(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.set_x(40)
+		pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  "+ str(max(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		
+		pdf.multi_cell(0, 8, '\n\n', 0, 1, 'L')
+
+		return snps_to_remove
 
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
@@ -140,13 +173,12 @@ class Pipeline(BasePipeline):
 		# no actual removal happens here, just list removal and records statistics in PDF
 		sample_qc_table, remove_samples, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
-		illumina_snps_to_remove = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
+		snps_to_remove = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
 					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
 					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'], outDir=outdir)
 
 
-		# TO DO:
-		# use plink --remove to remove the samples that fail QC in remove_sample file
+
 		
 		# initiate PLINK software
 		plink_general = Software('plink', pipeline_config['plink']['path'])
@@ -163,81 +195,233 @@ class Pipeline(BasePipeline):
 
 
 
+		# remove Illumina SNP initial QC:
+		# convert list to temporary file for PLINK
+		snps_to_remove_illumina = open(outdir+'/snps_to_remove_illumina.txt', 'w')
+		snps_to_remove_illumina.write('\n'.join(snps_to_remove))
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--exclude', os.path.realpath(snps_to_remove_illumina.name)),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC')
+			)
+
+		stage_for_deletion.append(outdir+'/snps_to_remove_illumina.txt')
+		########## make plink files for missingness RECALCULATED POST-ILLUMINA SNP QC ###########
+		
+		# all samples autosomal only
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--chr', '1-22'),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_autosomes')
+			)
+
+		# females and males, no unknowns, in BED format extract X snps only
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--chr', 'X'),
+			Parameter('--remove', outdir+'/unknown_by_ped.txt'),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females')
+			)
+		# make males only plink file in BED format and extract Y snps only
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--chr', 'Y'),
+			Parameter('--remove', outdir+'/females_and_unknowns_by_ped.txt'),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only')
+			)
+		# make females only plink file in BED FORMAT and extract MT snps only
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--chr', 'MT'),
+			Parameter('--remove', outdir+'/males_and_unknowns_by_ped.txt'),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only')
+			)
+
+		# all samples plink file in BED FORMAT and extract unknown chromosomes (0)
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--chr', '0'),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps')
+			)
+
+
+		# get missingness statistics exculsively from all samples autosomal chrs only 
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_autosomes'),
+			Parameter('--missing'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_autosomes')
+			)
+
+		# get missingness statistics exculsively from females and males X chromosome
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females'),
+			Parameter('--missing'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females')
+			)
+		# get missingness statistics exculsively from Y males only
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only'),
+			Parameter('--missing'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only')
+			)
+		# get missingness statistics exclusively from MT females only
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only'),
+			Parameter('--missing'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only')
+			)
+
+		# get missingness statistics exclusively from uknown chromosomal SNPs
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps'),
+			Parameter('--missing'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps')
+			)
+
+		callrate_pdf = FPDF()
+		callrate_pdf.add_page()
+		callrate_pdf.set_margins(20, 10, 20)
+		callrate_pdf.set_font('Arial', 'B', 30)
+		callrate_pdf.set_x(20)
+		callrate_pdf.multi_cell(0, 30, "SNP Call Rates", 0, 1, 'L')
+		callrate_pdf.line(20, 32, 190, 32)
+		
+		# autosomal call rate calculate and publish to callrate_pdf
+		snps_to_remove = self.call_rate(
+			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_autosomes.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_autosomes.imiss', 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			pdf=callrate_pdf, chrm='autosomal'
+			)
+
+		# chrX call rate calculate and publish to callrate_pdf
+		snps_to_remove = self.call_rate(
+			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.imiss', 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			pdf=callrate_pdf, chrm='chr X'
+			)
+
+		# chrY call rate calculate and publish to callrate_pdf
+		snps_to_remove = self.call_rate(
+			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.imiss', 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			pdf=callrate_pdf, chrm='chr Y'
+			)
+
+		# chrMT call rate calculate and publish to callrate_pdf
+		snps_to_remove = self.call_rate(
+			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.imiss', 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			pdf=callrate_pdf, chrm='chr MT'
+			)
+
+		# chrMT call rate calculate and publish to callrate_pdf
+		snps_to_remove = self.call_rate(
+			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.imiss', 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			pdf=callrate_pdf, chrm='chr 0 (no chr ID)'
+			)
+
+		# tags these files for removal when the pipeline finishes running
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.bed')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.bim')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.fam')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.imiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.lmiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.bed')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.bim')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.fam')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.lmiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.imiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bed')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bim')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.fam')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.bed')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.bim')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.fam')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.lmiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.imiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.lmiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.imiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bed')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bim')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.fam')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.imiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.lmiss')
+
+
+
+		# remove all SNPs from file not passing Illumina QC and not passing call rate QC
+		unique_snps_to_remove = set(snps_to_remove)
+		all_snps_removed = open(outdir+'/all_snps_removed.txt', 'w')
+		all_snps_removed.write('\n'.join(unique_snps_to_remove))
+		all_snps_removed.flush()
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--exclude', os.path.realpath(all_snps_removed.name)),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs')
+			)
+
+
 		#-----ROUND 1 SNP QC (Illumina recommended SNP metrics threhold removal)------
 
 		
 
-		# remove Illumina sample and SNP initial QC:
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
-			Parameter('--exclude', os.path.realpath(illumina_snps_to_remove.name)),
-			Parameter('--remove', os.path.realpath(remove_samples.name)),
-			Parameter('--make-bed'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_QC')
-			)
+		
 		
 		
 		#----ROUND 1 SAMPLE QC (sex check and batch effects)------
 
 		# perform sex checks
 		# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
-			Parameter('--split-x', self.extract_X_boundries(pipeline_args['genome_build'])[0], self.extract_X_boundries(pipeline_args['genome_build'])[1]),
-			Parameter('no-fail'),
-			Parameter('--make-bed'),
-			)
+		#plink_general.run(
+		#	Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+		#	Parameter('--split-x', self.extract_X_boundries(pipeline_args['genome_build'])[0], self.extract_X_boundries(pipeline_args['genome_build'])[1]),
+		#	Parameter('no-fail'),
+		#	Parameter('--make-bed')
+		#	)
+		
 		# check sex
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs'),
 			Parameter('--check-sex', pipeline_args['maxFemale'], pipeline_args['minMale']),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4])
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs')
 			)
 
 		# plink missingness calculations primarily for sample missingness check
 		print "Running PLINK sample and snp missingness"
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs'),
 			Parameter('--missing'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4])
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs')
 			)
 
 		# not imbedded in Illumina Sample check because uses own input files
-		stage_for_deletion = generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
+		stage_for_deletion = generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		pdf_internal_batch = FPDF()
 		# checks sex and call rate at the batch level
-		stage_for_deletion = generate_report.batch_effects(pdf=pdf_internal_batch, sexcheck=pipeline_args['inputPLINK'][:-4]+'.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'.imiss', outDir=outdir, cleanup=stage_for_deletion)
+		stage_for_deletion = generate_report.batch_effects(pdf=pdf_internal_batch, sexcheck=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.imiss', outDir=outdir, cleanup=stage_for_deletion)
 		
-
-
-	
-		#----ROUND 2 SNP QC-------
-
-		# plink missingness calculations
-		#print "Running PLINK sample and snp missingness"
-		#plink_general.run(
-		#	Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
-		#	Parameter('--missing'),
-		#	Parameter('--out', pipeline_args['inputPLINK'][:-4])
-		#	)
-
-
-		#----ROUND 2 SAMPLE QC------
-	
 
 
 
 		# --------------------PDF manipulation stuff-----------------------
 		pdf_summary_page = FPDF()
-		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC')
+		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs')
 
 		pdf_title.output(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf', 'F')
 		pdf.output(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf', 'F')
 		pdf_summary_page.output(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf', 'F')
 		pdf_thresh.output(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf', 'F')
 		pdf_internal_batch.output(outdir +'/'+pipeline_args['projectName']+'_internal_batch.pdf', 'F')
-
+		callrate_pdf.output(outdir +'/'+pipeline_args['projectName']+'non_auto_callrates.pdf', 'F')
 		# create PDF merge objects and write final PDF as project name with '_final_*.pdf' as suffix
 		pdf_merger_summary = PyPDF2.PdfFileMerger()
 		pdf_merger_detailed = PyPDF2.PdfFileMerger()
@@ -248,6 +432,7 @@ class Pipeline(BasePipeline):
 		pdf_merger_summary.append(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf')
 		pdf_merger_summary.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
 		pdf_merger_detailed.append(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf')
+		pdf_merger_detailed.append(outdir +'/'+pipeline_args['projectName']+'non_auto_callrates.pdf')
 		pdf_merger_glossary.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 		pdf_merger_glossary.append('Parameter_Definitions.pdf')
 		pdf_merger_internal.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf' )
@@ -272,7 +457,7 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf')
-		
+		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'non_auto_callrates.pdf')
 
 		# actually remove files in stage_for_deletion
 		print '\n\n' + "Cleaning up project directory"
