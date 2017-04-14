@@ -101,13 +101,25 @@ class Pipeline(BasePipeline):
 		unknowns_only.flush()
 
 	@staticmethod
-	def call_rate(missingnessSNP, missingnessSample, callrate, snps_to_remove, pdf, chrm):
+	def call_rate(missingnessSNP, missingnessSample, callrate, snps_to_remove, remove_reasons, pdf, chrm):
 		missingness_snp = pandas.read_table(missingnessSNP, delim_whitespace=True)
 		samples = pandas.read_table(missingnessSample, delim_whitespace=True)
 		total_samples = len(list(samples['IID']))
 		total_snps = len(list(missingness_snp['SNP']))
-		snp_fails = list(missingness_snp[missingness_snp['F_MISS'] > (1-callrate)]['SNP']) # subtract 1 since parameter is minimum percent called 
+		snp_fails_dataframe = missingness_snp[missingness_snp['F_MISS'] > (1-callrate)]
+		snp_fails_dataframe['F_MISS'] = 'failed '+ str(chrm) + ' SNP call rate threshold: ' + snp_fails_dataframe['F_MISS'].astype(str)
+		snp_fails_dict = snp_fails_dataframe.set_index('SNP')['F_MISS'].to_dict()
+		# to make easy to merge with existing dictionary without overwriting values
+		snp_fails_dict_appendable = {key:[value] for key, value in snp_fails_dict.iteritems()}
+		snp_fails = [key for key in snp_fails_dict] # subtract 1 since parameter is minimum percent called 
 		snps_to_remove = snps_to_remove + snp_fails
+
+		# merge dictionary with existing for snp reasons
+		for key, value in snp_fails_dict_appendable.iteritems():
+			try:
+				remove_reasons.setdefault(key, []).extend(value)
+			except TypeError:
+				remove_reasons[key].append(value)
 
 		# write this information to PDF
 		pdf.set_font('Arial', 'B', 14)
@@ -131,7 +143,7 @@ class Pipeline(BasePipeline):
 		
 		pdf.multi_cell(0, 8, '\n\n', 0, 1, 'L')
 
-		return snps_to_remove
+		return snps_to_remove, remove_reasons
 
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
@@ -293,37 +305,37 @@ class Pipeline(BasePipeline):
 		callrate_pdf.line(20, 32, 190, 32)
 		
 		# autosomal call rate calculate and publish to callrate_pdf
-		snps_to_remove = self.call_rate(
+		snps_to_remove, reasons_snps_fail = self.call_rate(
 			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_autosomes.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_autosomes.imiss', 
-			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, remove_reasons=reasons_snps_fail,
 			pdf=callrate_pdf, chrm='autosomal'
 			)
 
 		# chrX call rate calculate and publish to callrate_pdf
-		snps_to_remove = self.call_rate(
+		snps_to_remove, reasons_snps_fail = self.call_rate(
 			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.imiss', 
-			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, remove_reasons=reasons_snps_fail,
 			pdf=callrate_pdf, chrm='chr X'
 			)
 
 		# chrY call rate calculate and publish to callrate_pdf
-		snps_to_remove = self.call_rate(
+		snps_to_remove, reasons_snps_fail = self.call_rate(
 			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.imiss', 
-			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, remove_reasons=reasons_snps_fail,
 			pdf=callrate_pdf, chrm='chr Y'
 			)
 
 		# chrMT call rate calculate and publish to callrate_pdf
-		snps_to_remove = self.call_rate(
+		snps_to_remove, reasons_snps_fail = self.call_rate(
 			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.imiss', 
-			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, remove_reasons=reasons_snps_fail,
 			pdf=callrate_pdf, chrm='chr MT'
 			)
 
 		# chrMT call rate calculate and publish to callrate_pdf
-		snps_to_remove = self.call_rate(
+		snps_to_remove, reasons_snps_fail = self.call_rate(
 			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.imiss', 
-			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, 
+			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, remove_reasons=reasons_snps_fail,
 			pdf=callrate_pdf, chrm='chr 0 (no chr ID)'
 			)
 
@@ -354,7 +366,7 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.imiss')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.lmiss')
 
-
+		print reasons_snps_fail
 
 		# remove all SNPs from file not passing Illumina QC and not passing call rate QC
 		unique_snps_to_remove = set(snps_to_remove)
@@ -368,6 +380,11 @@ class Pipeline(BasePipeline):
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs')
 			)
 
+
+		snps_failing_QC_details = open(outdir + '/snps_failing_QC_details.txt', 'w')
+		for key, value in reasons_snps_fail.iteritems():
+			snps_failing_QC_details.write(str(key)+'\t'+'\t'.join(value)+'\n')
+		snps_failing_QC_details.flush()
 
 		#-----ROUND 1 SNP QC (Illumina recommended SNP metrics threhold removal)------
 
