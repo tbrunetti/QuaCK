@@ -171,15 +171,13 @@ class Pipeline(BasePipeline):
 		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		sample_qc_table, remove_samples, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
+		sample_qc_table, remove_samples_text, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
-		snps_to_remove = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
+		snps_to_remove, reasons_snps_fail = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
 					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
 					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'], outDir=outdir)
 
 
-
-		
 		# initiate PLINK software
 		plink_general = Software('plink', pipeline_config['plink']['path'])
 
@@ -188,6 +186,7 @@ class Pipeline(BasePipeline):
 			inputPlinkfile=pipeline_args['inputPLINK'], plink=pipeline_config['plink']['path']
 			)
 
+
 		# makes text file lists of family and sample IDs based on self-identified sex
 		self.separate_sexes(
 			plinkFam=pipeline_args['inputPLINK'][:-4]+'.fam', outDir=outdir
@@ -195,15 +194,16 @@ class Pipeline(BasePipeline):
 
 
 
-		# remove Illumina SNP initial QC:
+		# remove Illumina sample and SNP initial QC (not including call rate):
 		# convert list to temporary file for PLINK
 		snps_to_remove_illumina = open(outdir+'/snps_to_remove_illumina.txt', 'w')
 		snps_to_remove_illumina.write('\n'.join(snps_to_remove))
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
 			Parameter('--exclude', os.path.realpath(snps_to_remove_illumina.name)),
+			Parameter('--remove', os.path.realpath(remove_samples_text.name)),
 			Parameter('--make-bed'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC')
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC')
 			)
 
 		stage_for_deletion.append(outdir+'/snps_to_remove_illumina.txt')
@@ -211,7 +211,7 @@ class Pipeline(BasePipeline):
 		
 		# all samples autosomal only
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', '1-22'),
 			Parameter('--make-bed'),
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_autosomes')
@@ -219,7 +219,7 @@ class Pipeline(BasePipeline):
 
 		# females and males, no unknowns, in BED format extract X snps only
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', 'X'),
 			Parameter('--remove', outdir+'/unknown_by_ped.txt'),
 			Parameter('--make-bed'),
@@ -227,7 +227,7 @@ class Pipeline(BasePipeline):
 			)
 		# make males only plink file in BED format and extract Y snps only
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', 'Y'),
 			Parameter('--remove', outdir+'/females_and_unknowns_by_ped.txt'),
 			Parameter('--make-bed'),
@@ -235,7 +235,7 @@ class Pipeline(BasePipeline):
 			)
 		# make females only plink file in BED FORMAT and extract MT snps only
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', 'MT'),
 			Parameter('--remove', outdir+'/males_and_unknowns_by_ped.txt'),
 			Parameter('--make-bed'),
@@ -244,7 +244,7 @@ class Pipeline(BasePipeline):
 
 		# all samples plink file in BED FORMAT and extract unknown chromosomes (0)
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_SNP_QC'),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', '0'),
 			Parameter('--make-bed'),
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps')
@@ -362,7 +362,7 @@ class Pipeline(BasePipeline):
 		all_snps_removed.write('\n'.join(unique_snps_to_remove))
 		all_snps_removed.flush()
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--exclude', os.path.realpath(all_snps_removed.name)),
 			Parameter('--make-bed'),
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs')
@@ -402,8 +402,9 @@ class Pipeline(BasePipeline):
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs')
 			)
 
+		overall_sex_pdf = FPDF()
 		# not imbedded in Illumina Sample check because uses own input files
-		stage_for_deletion = generate_report.graph_sexcheck(pdf=pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
+		stage_for_deletion = generate_report.graph_sexcheck(pdf=overall_sex_pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		pdf_internal_batch = FPDF()
 		# checks sex and call rate at the batch level
@@ -421,7 +422,9 @@ class Pipeline(BasePipeline):
 		pdf_summary_page.output(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf', 'F')
 		pdf_thresh.output(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf', 'F')
 		pdf_internal_batch.output(outdir +'/'+pipeline_args['projectName']+'_internal_batch.pdf', 'F')
-		callrate_pdf.output(outdir +'/'+pipeline_args['projectName']+'non_auto_callrates.pdf', 'F')
+		callrate_pdf.output(outdir +'/'+pipeline_args['projectName']+'_non_auto_callrates.pdf', 'F')
+		overall_sex_pdf.output(outdir +'/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf', 'F')
+
 		# create PDF merge objects and write final PDF as project name with '_final_*.pdf' as suffix
 		pdf_merger_summary = PyPDF2.PdfFileMerger()
 		pdf_merger_detailed = PyPDF2.PdfFileMerger()
@@ -432,7 +435,8 @@ class Pipeline(BasePipeline):
 		pdf_merger_summary.append(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf')
 		pdf_merger_summary.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
 		pdf_merger_detailed.append(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf')
-		pdf_merger_detailed.append(outdir +'/'+pipeline_args['projectName']+'non_auto_callrates.pdf')
+		pdf_merger_detailed.append(outdir +'/'+pipeline_args['projectName']+'_non_auto_callrates.pdf')
+		pdf_merger_detailed.append(outdir + '/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf')
 		pdf_merger_glossary.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 		pdf_merger_glossary.append('Parameter_Definitions.pdf')
 		pdf_merger_internal.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf' )
@@ -458,6 +462,10 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'non_auto_callrates.pdf')
+		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.bed')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.bim')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam')
 
 		# actually remove files in stage_for_deletion
 		print '\n\n' + "Cleaning up project directory"
