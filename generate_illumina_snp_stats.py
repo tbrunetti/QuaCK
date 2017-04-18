@@ -190,7 +190,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	print "		Writing SNP QC to PDF"	
 	# create running title for SNP quality
 	pdf.add_page()
-	pdf.set_font('Arial', 'B', 30)
+	pdf.set_font('Arial', 'B', 24)
 	pdf.cell(0, 30, "Illumina SNP Quality Assessment", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	pdf.set_fill_color(200)
@@ -219,7 +219,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 
 	# write cluster sep stats 
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.multi_cell(0, 10, "Cluster Separation Statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.multi_cell(0, 8, "Total SNPs passing cluster separation threshold:  "+str(total_snps_passing_clust) + '  ' 
@@ -238,7 +238,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	
 	
 		# write AA_T mean score stats
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "AA T mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA T mean threshold:  "+str(total_snps_passing_AATmean) + '  ' 
@@ -257,7 +257,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 
 	# write AA_T dev score stats
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "AA T dev score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA T dev threshold:  "+str(total_snps_passing_AATdev) + '  ' 
@@ -277,7 +277,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 
 	# write BB_T mean score stats
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "BB T mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB T mean threshold:  "+str(total_snps_passing_BBTmean) + '  ' 
@@ -297,7 +297,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 
 	# write BB_T dev score stats
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "BB T dev score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB T dev threshold:  "+str(total_snps_passing_BBTdev) + '  ' 
@@ -318,7 +318,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 
 	# write AA R mean score stats
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "AA R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA R mean threshold:  "+str(total_snps_passing_AARmean) + '  ' 
@@ -339,7 +339,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 
 	# write AB R mean score stats
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "AB R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AB R mean threshold:  "+str(total_snps_passing_ABRmean) + '  ' 
@@ -358,7 +358,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 
 	# write BB R mean score stats
-	pdf.set_font('Arial', 'B', 14)
+	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "BB R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB R mean threshold:  "+str(total_snps_passing_BBRmean) + '  ' 
