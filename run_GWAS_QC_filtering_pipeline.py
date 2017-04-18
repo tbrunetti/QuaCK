@@ -1,18 +1,10 @@
 from chunkypipes.components import *
 import sys
 import os
-import pandas
-import datetime
-import subprocess
-import statistics as stats
-from fpdf import FPDF
-sys.path.append(".")
-import generate_report
-import generate_illumina_snp_stats
-import PyPDF2
+
 
 class Pipeline(BasePipeline):
-		
+	
 	def dependencies(self):
 		# assuming user as pip installed
 		return ['pandas', 'matplotlib', 'fpdf', 'Pillow', 'seaborn', 'pypdf2']
@@ -21,6 +13,7 @@ class Pipeline(BasePipeline):
 		return 'Pipeline to perform sample QC (call rate, HWE, Mendelian Error)'
 
 	def configure(self):
+			
 		return {
 			'plink':{
 				'path': 'Full path to PLINK executable (must be version >=1.9):'
@@ -47,7 +40,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--genome_build', default='b37-hg19', type=str, help='[default:b37-hg19], genome build options: b36-hg18, b37-hg19, b38-hg38')
 		parser.add_argument('--maxFemale', default=0.20, type=float, help='[default:0.20] F scores below this value will be imputed as female subjects based on X-chromosome imputation')
 		parser.add_argument('--minMale', default=0.80, type=float, help='[default:0.80] F scores above this value will be imputed as male subjects based on X-chromosome imputation')
-	
+		parser.add_argument('--chipFailure', default=1, type=int, help='[default:1] Maximum number of sex discrepencies a chip can have before considered failing')
 
 	@staticmethod
 	def check_input_format(inputPlinkfile, plink):
@@ -80,6 +73,8 @@ class Pipeline(BasePipeline):
 
 	@staticmethod
 	def separate_sexes(plinkFam, outDir):
+		import pandas
+
 		females_and_unknowns = open(outDir+'/females_and_unknowns_by_ped.txt', 'w')
 		males_and_unknowns = open(outDir+'/males_and_unknowns_by_ped.txt', 'w')
 		unknowns_only = open(outDir+'/unknown_by_ped.txt', 'w')
@@ -102,6 +97,10 @@ class Pipeline(BasePipeline):
 
 	@staticmethod
 	def call_rate(missingnessSNP, missingnessSample, callrate, snps_to_remove, remove_reasons, pdf, chrm):
+		import pandas
+		import statistics as stats
+		from fpdf import FPDF
+		
 		missingness_snp = pandas.read_table(missingnessSNP, delim_whitespace=True)
 		samples = pandas.read_table(missingnessSample, delim_whitespace=True)
 		total_samples = len(list(samples['IID']))
@@ -147,7 +146,17 @@ class Pipeline(BasePipeline):
 
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
-	
+		
+		import datetime
+		import subprocess
+		import statistics as stats
+		sys.path.append(".")
+		import pandas
+		import generate_report
+		import generate_illumina_snp_stats
+		import PyPDF2
+		from fpdf import FPDF
+		
 		# specifying output location and conflicting project names of files generated	
 		try:
 			os.stat(pipeline_args['outDir']+'/'+pipeline_args['projectName'])
@@ -198,16 +207,22 @@ class Pipeline(BasePipeline):
 			inputPlinkfile=pipeline_args['inputPLINK'], plink=pipeline_config['plink']['path']
 			)
 
-
 		# makes text file lists of family and sample IDs based on self-identified sex
 		self.separate_sexes(
 			plinkFam=pipeline_args['inputPLINK'][:-4]+'.fam', outDir=outdir
 			)
 
 
-
+	# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
+		#plink_general.run(
+		#	Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+		#	Parameter('--split-x', self.extract_X_boundries(pipeline_args['genome_build'])[0], self.extract_X_boundries(pipeline_args['genome_build'])[1]),
+		#	Parameter('no-fail'),
+		#	Parameter('--make-bed')
+		#	)
 		# remove Illumina sample and SNP initial QC (not including call rate):
 		# convert list to temporary file for PLINK
+		
 		snps_to_remove_illumina = open(outdir+'/snps_to_remove_illumina.txt', 'w')
 		snps_to_remove_illumina.write('\n'.join(snps_to_remove))
 		plink_general.run(
@@ -299,7 +314,7 @@ class Pipeline(BasePipeline):
 		callrate_pdf = FPDF()
 		callrate_pdf.add_page()
 		callrate_pdf.set_margins(20, 10, 20)
-		callrate_pdf.set_font('Arial', 'B', 30)
+		callrate_pdf.set_font('Arial', 'B', 24)
 		callrate_pdf.set_x(20)
 		callrate_pdf.multi_cell(0, 30, "SNP Call Rates", 0, 1, 'L')
 		callrate_pdf.line(20, 32, 190, 32)
@@ -366,8 +381,6 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.imiss')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.lmiss')
 
-		print reasons_snps_fail
-
 		# remove all SNPs from file not passing Illumina QC and not passing call rate QC
 		unique_snps_to_remove = set(snps_to_remove)
 		all_snps_removed = open(outdir+'/all_snps_removed.txt', 'w')
@@ -396,13 +409,6 @@ class Pipeline(BasePipeline):
 		#----ROUND 1 SAMPLE QC (sex check and batch effects)------
 
 		# perform sex checks
-		# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
-		#plink_general.run(
-		#	Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
-		#	Parameter('--split-x', self.extract_X_boundries(pipeline_args['genome_build'])[0], self.extract_X_boundries(pipeline_args['genome_build'])[1]),
-		#	Parameter('no-fail'),
-		#	Parameter('--make-bed')
-		#	)
 		
 		# check sex
 		plink_general.run(
@@ -425,7 +431,7 @@ class Pipeline(BasePipeline):
 		
 		pdf_internal_batch = FPDF()
 		# checks sex and call rate at the batch level
-		stage_for_deletion = generate_report.batch_effects(pdf=pdf_internal_batch, sexcheck=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.imiss', outDir=outdir, cleanup=stage_for_deletion)
+		stage_for_deletion, failed_chips, batch_summary = generate_report.batch_effects(pdf=pdf_internal_batch, chipFail=pipeline_args['chipFailure'], sexcheck=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'_cleaned_SNPs.imiss', outDir=outdir, cleanup=stage_for_deletion)
 		
 
 
@@ -441,6 +447,7 @@ class Pipeline(BasePipeline):
 		pdf_internal_batch.output(outdir +'/'+pipeline_args['projectName']+'_internal_batch.pdf', 'F')
 		callrate_pdf.output(outdir +'/'+pipeline_args['projectName']+'_non_auto_callrates.pdf', 'F')
 		overall_sex_pdf.output(outdir +'/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf', 'F')
+		batch_summary.output(outdir + '/' +pipeline_args['projectName']+'_batch_summary.pdf', 'F')
 
 		# create PDF merge objects and write final PDF as project name with '_final_*.pdf' as suffix
 		pdf_merger_summary = PyPDF2.PdfFileMerger()
@@ -456,6 +463,9 @@ class Pipeline(BasePipeline):
 		pdf_merger_detailed.append(outdir + '/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf')
 		pdf_merger_glossary.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 		pdf_merger_glossary.append('Parameter_Definitions.pdf')
+		pdf_merger_glossary.append('pre-QC-initialization-workflow.pdf')
+		pdf_merger_glossary.append('QC-pipeline-workflow.pdf')
+		pdf_merger_internal.append(outdir + '/'+ pipeline_args['projectName']+'_batch_summary.pdf')
 		pdf_merger_internal.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf' )
 		
 
@@ -478,8 +488,9 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'non_auto_callrates.pdf')
+		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_non_auto_callrates.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf')
+		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_batch_summary.pdf')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.bed')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.bim')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam')
