@@ -31,7 +31,7 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile):
 		quality control pipeline that was performed as well as parameters and thresholds that were used.  At the end \
 		of the PDF there is also a definitions page that lists what each metric means and how it was calculated.  If you \
 		have any questions or concerns please contact the TICR department at the University of Colorado Anschutz Medical \
-		campus at (303) 724-9918. "+'\n\n\n\n\n', 0, 1, 'J')
+		campus at <email@ucdenver.edu>. "+'\n\n\n\n\n', 0, 1, 'J')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.set_fill_color(200)
 	pdf.multi_cell(0, 8, "Sample Summary", 1, 'L', True)
@@ -58,18 +58,21 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile):
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Percent Missing Data: ", 1, 1, 'L')
 
+def explanation_of_deliverables(pdf, params):
+	pass;
 
 
 def thresholds_and_parameters(pdf, params):
 	pdf.add_page()
 	pdf.set_margins(20, 10, 20)
-	pdf.set_font('Arial', 'B', 30)
+	pdf.set_font('Arial', 'B', 24)
 	pdf.set_x(20)
 	pdf.multi_cell(0, 30, "Parameters and Thresholds", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	pdf.set_font('Arial', '', 16)
 	for key in params:
-		pdf.multi_cell(0, 8, str(key)+':     '+str(params[key]), 0, 1, 'L')
+		if key not in ['sampleTable', 'snpTable', 'projectName', 'config', 'inputPLINK', 'outDir', 'arrayType']:
+			pdf.multi_cell(0, 8, str(key)+':     '+str(params[key]), 0, 1, 'L')
 
 
 def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
@@ -79,7 +82,7 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	pdf.add_page()
 	pdf.set_margins(20, 10, 20)
 
-	pdf.set_font('Arial', 'B', 30)
+	pdf.set_font('Arial', 'B', 24)
 
 	sample_qc_table = pandas.read_table(inputFile)
 	total_samples = len(list(sample_qc_table['Sample ID']))
@@ -87,7 +90,7 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	samples_to_remove = list(sample_qc_table[sample_qc_table['Call Rate'] < callrate]['Sample ID'])
 	basic_call_stats = [stats.median(sample_qc_table['Call Rate']), stats.mean(sample_qc_table['Call Rate']), stats.stdev(sample_qc_table['Call Rate']), min(sample_qc_table['Call Rate']), max(sample_qc_table['Call Rate'])]
 	pdf.set_x(20)
-	pdf.multi_cell(0, 30, "Sample Quality Assessment", 0, 1, 'L')
+	pdf.multi_cell(0, 30, "Illumina Sample Quality Assessment", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	pdf.set_fill_color(200)
 	pdf.set_font('Arial', 'B', 16)
@@ -138,7 +141,7 @@ def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
 
 	print "checking sex concordance"
 	pdf.add_page()
-	pdf.set_font('Arial', 'B', 30)
+	pdf.set_font('Arial', 'B', 24)
 	pdf.set_margins(20, 10, 20)
 	pdf.multi_cell(0, 30, "Overall Sex Concordance Check", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
@@ -193,15 +196,17 @@ def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
 
 	return cleanup
 
-def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
+def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
+	batch_summary = FPDF()
 	# sex concordance between batches
-	pdf.add_page()
-	pdf.set_font('Arial', 'B', 30)
-	pdf.set_margins(20, 10, 20)
-	pdf.multi_cell(0, 30, "Batch Statistics", 0, 1, 'L')
-	pdf.line(20, 32, 190, 32)
+	batch_summary.add_page()
+	batch_summary.set_font('Arial', 'B', 30)
+	batch_summary.set_margins(20, 10, 20)
+	batch_summary.set_x(20)
+	batch_summary.multi_cell(0, 30, "Batch Statistics", 0, 1, 'L')
+	batch_summary.line(20, 32, 190, 32)
 	
 	# sex check and sample missingness by batch and by chip
 	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
@@ -221,10 +226,10 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 			print 'BATCH ID [' + str(batch) + '] not formatted properly!'
 	
 	
-	pdf.set_font('Arial', 'B', 16)
-	pdf.set_fill_color(200)
-	pdf.multi_cell(0, 10, 'Total Number of Batches:  ' +  str(len(batch_sex)), 1, 'L', True)
-	pdf.multi_cell(0, 10, 'Batch Sample Missingness Statistics:  ', 1, 'L', True)
+	batch_summary.set_font('Arial', 'B', 16)
+	batch_summary.set_fill_color(200)
+	batch_summary.multi_cell(0, 10, 'Total Number of Batches:  ' +  str(len(batch_sex)), 1, 'L', True)
+	batch_summary.multi_cell(0, 10, 'Batch Sample Missingness Statistics:  ', 1, 'L', True)
 
 
 	# missingness data format data for seaborn boxplot/strip plot
@@ -241,7 +246,7 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'missing_call_rate_samples.png')
 	plt.close()
-	pdf.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=130, w=190, h=150)
+	batch_summary.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=140, w=190, h=150)
 	cleanup.append(outDir+'/'+'missing_call_rate_samples.png')  # puts image in line for deletion; happens after final PDF has been generated
 
 	
@@ -252,16 +257,20 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 		temp = missing_call_dataframe.loc[missing_call_dataframe['batch'].isin([batch_name])]
 		batch_call_averages.append(temp['missing call rate'].mean())
 		batch_call_averages_paired[batch_name] = temp['missing call rate'].mean() 
-	pdf.set_font('Arial', '', 14)
-	pdf.set_x(40)
-	pdf.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages)*100, 2))+'%', 1, 1, 'L') 
-	pdf.set_x(40)
-	pdf.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages)*100, 2)), 1, 1, 'L')
-	pdf.set_x(40)
-	pdf.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
-	pdf.set_x(40)
-	pdf.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
+	batch_summary.set_font('Arial', '', 14)
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages)*100, 2))+'%', 1, 1, 'L') 
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages)*100, 2)), 1, 1, 'L')
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
 
+	# record chip statistics
+	total_chips = 0
+	total_chips_fail = 0 # fail is when chip has 2 or more sex discrepancies
+	failing_chip_IDs = {}
 
 	# outputs graphs and statistics per batch based on sex	
 	for key in batch_sex:
@@ -312,6 +321,13 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  100.0%", 0, 1, 'L')
 			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+'0', 0, 1, 'L')
 
+			# calculate total number of chips in batch
+			all_wells = list(sorted_sex_batch_dataframe['well'])
+			batch_chip_total = []
+			for i in all_wells:
+				batch_chip_total.append(i[1:])
+			total_chips = total_chips + len(list(set(batch_chip_total)))
+
 		elif 'OK' not in contradictions_headers:
 			pdf.set_font('Arial', 'B', 14)
 			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
@@ -319,13 +335,13 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
 			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
 			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
-		else:
-			pdf.set_font('Arial', 'B', 14)
-			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str((float(contradictions['OK'])/float(len(batch_sex[key])))*100)+'%', 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
-			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
-			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
+			
+			# calculate total number of chips in batch
+			all_wells = list(sorted_sex_batch_dataframe['well'])
+			batch_chip_total = []
+			for i in all_wells:
+				batch_chip_total.append(i[1:])
+			total_chips = total_chips + len(list(set(batch_chip_total)))
 
 			rows = []
 			columns = []
@@ -344,6 +360,62 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 			for col in all_columns:
 				if col not in problem_columns:
 					problem_columns[col] = 0
+
+			# count and record number of failing chips
+			ordered_freq_chips = problem_columns.most_common()
+			while len(ordered_freq_chips) !=0 and ordered_freq_chips[0][1] > chipFail:
+				total_chips_fail=total_chips_fail + 1
+				if key in failing_chip_IDs:
+					failing_chip_IDs[key] = failing_chip_IDs[key] + [str(ordered_freq_chips[0][0])]
+					ordered_freq_chips.pop(0)
+				else:
+					failing_chip_IDs[key] = [str(ordered_freq_chips[0][0])]
+					ordered_freq_chips.pop(0)
+			
+			
+		else:
+			pdf.set_font('Arial', 'B', 14)
+			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str((float(contradictions['OK'])/float(len(batch_sex[key])))*100)+'%', 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
+			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
+			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
+
+			# calculate total number of chips in batch
+			all_wells = list(sorted_sex_batch_dataframe['well'])
+			batch_chip_total = []
+			for i in all_wells:
+				batch_chip_total.append(i[1:])
+			total_chips = total_chips + len(list(set(batch_chip_total)))
+
+			rows = []
+			columns = []
+			for i in problem_wells:
+				rows.append(i[0])
+				columns.append(i[1:])
+			width = 1
+			all_rows =['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+			problem_rows = collections.Counter(rows)
+			for row in all_rows:
+				if row not in problem_rows:
+					problem_rows[row] = 0
+			
+			all_columns=['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
+			problem_columns = collections.Counter(columns)
+			for col in all_columns:
+				if col not in problem_columns:
+					problem_columns[col] = 0
+
+			# count and record number of failing chips
+			ordered_freq_chips = problem_columns.most_common()
+			while len(ordered_freq_chips) != 0 and ordered_freq_chips[0][1] > chipFail:
+				total_chips_fail=total_chips_fail + 1
+				if key in failing_chip_IDs:
+					failing_chip_IDs[key] = failing_chip_IDs[key] + [str(ordered_freq_chips[0][0])]
+					ordered_freq_chips.pop(0)
+				else:
+					failing_chip_IDs[key] = [str(ordered_freq_chips[0][0])]
+					ordered_freq_chips.pop(0)
 			
 			plt.bar(np.arange(len(problem_rows.keys())), problem_rows.values(), width, edgecolor='black', align='center')
 			plt.xticks(np.arange(len(problem_rows.keys())), problem_rows.keys(), fontweight='bold')
@@ -356,69 +428,23 @@ def batch_effects(pdf, sexcheck, missingness, outDir, cleanup):
 			pdf.image(outDir+'/'+"problem_rows"+str(key)+'.png', x=110, y=190, w=79, h=42)
 			plt.bar(np.arange(len(problem_columns.keys())), problem_columns.values(), width, edgecolor='black', align='center')
 			plt.xticks(np.arange(len(problem_columns.keys())), problem_columns.keys(), fontweight='bold')
-			plt.title('Distribution of problematic columns', fontweight='bold')
-			plt.xlabel("plate column number", fontweight='bold')
+			plt.title('Distribution of problematic chips', fontweight='bold')
+			plt.xlabel("chip number", fontweight='bold')
 			plt.ylabel("Frequency", fontweight='bold')
 			plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-			plt.savefig(outDir+'/'+'problem_columns'+str(key)+'.png', bbox_inches='tight')
+			plt.savefig(outDir+'/'+'problem_chips'+str(key)+'.png', bbox_inches='tight')
 			plt.close()
-			pdf.image(outDir+'/'+"problem_columns"+str(key)+'.png', x=110, y=230, w=79, h=42)
+			pdf.image(outDir+'/'+"problem_chips"+str(key)+'.png', x=110, y=230, w=79, h=42)
 			cleanup.append(outDir+'/'+'problem_rows'+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
-			cleanup.append(outDir+'/'+"problem_columns"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+			cleanup.append(outDir+'/'+"problem_chips"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
-	return cleanup
-
-
-def sample_phenotype_overview_post_cleanup(sampleInfo, cleanup):
-# sampleInfo is the same table generated and returned from the illumina_sample_overview() method
-	
-
-	def check_ethnicity(sampleInfo, cleanup):
-		warnings.simplefilter(action = "ignore", category = FutureWarning)
-
-		pdf.add_page()
-		pdf.set_margins(20, 10, 20)
-		# ethnicity and race breakdown
-		sampleInfo['RACE'].replace(np.nan, 'NaN', regex=True, inplace=True) # converts pandas nans into strings (by default they are ints)
-		sampleInfo['RACE'].value_counts(dropna=False).plot(kind='pie', autopct='%.2f', fontsize=16)
-		plt.axis('equal')
-		plt.savefig(outDir+'/'+'ethinic_breakdown.png', bbox_inches='tight')
-		plt.close()
-		pdf.image(outDir+'/'+'ethinic_breakdown.png', x=20, y=130, w=130)
-		cleanup.append(outDir+'/'+'ethinic_breakdown.png')  # puts image in line for deletion; happens after final PDF has been generated
-		
-		all_samples_ethnicity = dict(sampleInfo['RACE'].value_counts(dropna=True)) # creates the value counts of ethnicity into dictionary for easy PDF writing key=eth; value=total samples
+	batch_summary.set_font('Arial', 'B', 16)
+	batch_summary.set_fill_color(200)
+	batch_summary.multi_cell(0, 10, 'Total Number of Chips:  ' +  str(total_chips), 1, 'L', True)
+	batch_summary.set_font('Arial', '', 14)
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, 'Total Number Failing: ' + str(total_chips_fail), 1, 1, 'L')
 
 
-		store_removal_ethnicity = []
-		for i in samples_to_remove:
-			 store_removal_ethnicity.append(list(sampleInfo.loc[sampleInfo['Sample ID'] == i]['RACE']))
-		store_removal_ethnicity = [store_removal_ethnicity[i][0] for i in range(0, len(store_removal_ethnicity))]
-		ethnicity_removals = collections.Counter(store_removal_ethnicity)
-		
-		pdf.set_font('Arial', 'B', 20)
-		pdf.multi_cell(0, 30, "Race and Ethnicity Distribution", 0, 1, 'L')
-		pdf.line(20, 32, 190, 32)
-		pdf.set_font('Arial', '', 16)
-		pdf.multi_cell(0, 10, 'Ethnic Background of all samples:', 0, 1, 'L')
-		
-		for key in all_samples_ethnicity: # writes out to PDF of number of samples in each ethnic group
-			pdf.set_x(40)
-			pdf.multi_cell(0, 8, str(key)+':  '+str(all_samples_ethnicity[key]), 0, 1, 'L')
-		
-		pdf.multi_cell(0, 10, 'Ethnic Background of removed samples:', 0, 1, 'L')
-		for key in ethnicity_removals: # write out to PDF the ethnic backgrounds of the removed samples
-			pdf.set_x(40)
-			pdf.multi_cell(0, 8, str(key)+':  '+str(ethnicity_removals[key]), 0, 1, 'L')	
-			check_ethnicity(sampleInfo=sample_qc_table, cleanup=cleanup)
 
-		return cleanup
-	
-	# this is from .fam file
-	def sex_distribution(cleanup):
-		pass;
-
-	# this is from .fam file
-	def affection(cleanup):
-		pass;
-
+	return cleanup, failing_chip_IDs, batch_summary
