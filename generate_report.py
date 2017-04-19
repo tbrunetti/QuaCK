@@ -27,11 +27,11 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile):
 	pdf.set_font('Arial', '', 12)
 	pdf.multi_cell(0, 5, "Listed below are the basic overall summary statistics for this project \
 		broken down into three categories: Sample Summary, SNP Summary, and Data Summary. For more detailed \
-		information please refer to the subsequent pages.  They will provide you with a more granular view of the \
+		information please refer to the subsequent PDFs and pages.  They will provide you with a more granular view of the \
 		quality control pipeline that was performed as well as parameters and thresholds that were used.  At the end \
 		of the PDF there is also a definitions page that lists what each metric means and how it was calculated.  If you \
 		have any questions or concerns please contact the TICR department at the University of Colorado Anschutz Medical \
-		campus at <email@ucdenver.edu>. "+'\n\n\n\n\n', 0, 1, 'J')
+		Campus at <email@ucdenver.edu>. "+'\n\n\n\n\n', 0, 1, 'J')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.set_fill_color(200)
 	pdf.multi_cell(0, 8, "Sample Summary", 1, 'L', True)
@@ -59,7 +59,71 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile):
 	pdf.multi_cell(0, 8, "Percent Missing Data: ", 1, 1, 'L')
 
 def explanation_of_deliverables(pdf, params):
-	pass;
+	pdf.add_page()
+	pdf.set_margins(20, 10, 20)
+	pdf.set_font('Arial', 'B', 24)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 30, "Deliverables", 0, 1, 'L')
+	pdf.line(20, 32, 190, 32)
+	pdf.set_font('Arial', 'BI', 16)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 10, 'Raw Plink Files', 0, 1, 'L')
+	pdf.set_font('Arial', '', 12)
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'Two PLINK files are provided: .PED and .MAP files.  These files contain the RAW PRE-FILTERED \
+		samples and SNPs from your project.  These files can be used directly with PLINK software.  For more information regarding \
+		the PLINK format please refer to the following website https://www.cog-genomics.org/plink/1.9/'+'\n\n', 0, 1, 'J')
+
+	
+	pdf.set_font('Arial', 'BI', 16)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 10, 'Cleaned Plink Files', 0, 1, 'L')
+	pdf.set_font('Arial', '', 12)
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'Three PLINK files are provided: .BED, .BIM, and .FAM files.  These files contain the  \
+		samples and SNPs that have passed our QC pipeline from your project.  These files can be used directly with PLINK software. \
+		For more information regarding the PLINK format please refer to the following website \
+		https://www.cog-genomics.org/plink/1.9/'+'\n\n', 0, 1, 'J')
+
+
+	pdf.set_font('Arial', 'BI', 16)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 10, 'PDF Reports', 0, 1, 'L')
+	pdf.set_font('Arial', '', 12)
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'Three PDF files are provided:', 0, 1, 'J')
+	pdf.set_x(35)
+	pdf.multi_cell(0, 5, '\n'+params['projectName']+'_final_summary_report.pdf' + '\n' + params['projectName']+'_final_detailed_report.pdf' +'\n' + 
+		params['projectName']+'_final_glossary_report.pdf'+'\n\n', 0, 1, 'L') 
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'The '+params['projectName']+'_final_summary_report.pdf is this current PDF which contains information \
+		regarding the explanation of the deliverables and an overall final QC summary page.  This is meant to provide the investigator \
+		with a quick overview of the final number of samples, snps, and genotypes that were analyzed and that passed our QC pipeline. \
+		The ' + params['projectName']+'_final_detailed_report.pdf contains all of the fine details of the samples and snps that pass \
+		the recommended Illumina sample and SNP QC, as well as SNPs that pass call rate thresholds and samples sex concordance. The \
+		information and statistics reported are collected sequentially as the data is pushed through the QC pipeline.  Finally, \
+		the '+ params['projectName']+'_final_glossary_report.pdf provides the investigator with an explanation of the parameters and \
+		thresholds that were used in the pipeline.  We have also provided two detailed images of our QC pipeline work flow.  All the details \
+		of how parameters and thresholds are calculated are provided in this document. Additionally, the names of the pipeline parameter names \
+		are provided in the event that the investigator would like to download and run our QC pipeline on their own copmuter or server under \
+		differet parameters and thresholds.'+'\n\n', 0, 1, 'J')
+
+
+	pdf.set_font('Arial', 'BI', 16)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 10, 'Text Files', 0, 1, 'L')
+	pdf.set_font('Arial', '', 12)
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'Three text files are provided:', 0, 1, 'J')
+	pdf.set_x(35)
+	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'GenomeStudio_samples_table.txt' + '\n' + 'GenomeStudio_SNPs_table.txt' +'\n\n', 0, 1, 'L') 
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'The snps_failing_QC_details.txt is a tab-delimited file that contains all the SNPs that were removed due to failing at least \
+		one QC check.  Each line in the first column represents a single SNP name.  Any susequent columns in the line are reasons why the SNP failed. \
+		There may be more than one reason and each reason is a new column.  You will notice a number followed by the reasoning; this number represents \
+		the value that the particular SNP was calculated for that parameter.  Both GenomeStudio text files are files that contain some infomation \
+		that we use in the initial step of our QC pipeline regarding your samples and SNPs.  For more information on what the columns mean please \
+		refer to the glossary report PDF.'+'\n\n', 0, 1, 'J')
 
 
 def thresholds_and_parameters(pdf, params):
@@ -78,6 +142,7 @@ def thresholds_and_parameters(pdf, params):
 def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 	print "Running Illumina Sample QC..."
+	
 	samples_to_remove_text = open(outDir+'/'+'samples_to_remove.txt', 'w')
 	pdf.add_page()
 	pdf.set_margins(20, 10, 20)
