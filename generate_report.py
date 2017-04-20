@@ -251,12 +251,12 @@ def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
 	pdf.set_font('Arial', 'B', 16)
 	pdf.set_fill_color(200)
 	pdf.multi_cell(0, 10, 'Total Number of Concordant Samples:  ' +  str(len(concordant_calls.index)), 1, 'L', True)
-	pdf.multi_cell(0, 10, 'Total Number of Discrepencies:  '+str(len(fixed_sex + indeterminate_sex)), 1, 'L', True)
+	pdf.multi_cell(0, 10, 'Total Number of Discrepencies:  '+str(len(indeterminate_sex)), 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
-	pdf.multi_cell(0, 10, '# of samples that need to be fixed:  '+str(len(fixed_sex)), 1, 1, 'L')
+	pdf.multi_cell(0, 10, '# of samples that can likely be fixed:  '+str(len(fixed_sex)), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 10, '# of samples that need to be removed:  '+str(len(indeterminate_sex)), 1, 1, 'L')
+	pdf.multi_cell(0, 10, '# of samples that need to be removed:  '+str(len(indeterminate_sex)-len(fixed_sex)), 1, 1, 'L')
 
 
 	return cleanup
