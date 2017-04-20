@@ -133,7 +133,7 @@ chunky run run_GWAS_QC_filtering_pipeline.py -sampleTable /path/to/genomeStudio_
 ```
 The PLINK file can be generated easily using Illumina's GenomeStudio.  GenomeStudio only needs to be used to extract table information and generate a ped file.  No calculations need to be generated from GenomeStudio except for the calculations against the cluster file for SNP cluster membership and for p10GC quality for overall genotyping call rate per sample.  Additionally as long as the sample table and snp table contain the minimal headings and information listed in the file specifications, GenomeStudio is not a dependency.
 
-___***OPTIONAL ARGUMENTS***___
+___***OPTIONAL ARGUMENTS***___  
 There are many options for the user to customize the pipeline for their own personal preferences.  However if no parameters and thresholds are set by the user, all arguments will be set to a default value.  These defaults are hard cut-offs recommended by Illumina or set by our lab based on what we have seen works best.
 
 | Pipeline Argument | Default Value | Description |
@@ -142,4 +142,5 @@ There are many options for the user to customize the pipeline for their own pers
 
 ## Ouput and Deliverables
 --------------------------
+
 
