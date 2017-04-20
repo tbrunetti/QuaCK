@@ -15,13 +15,31 @@ The purpose of this pipeline is to automate the first stage of genotyping qualit
 
 ## Software Requirements
 ------------------------
+* Python version 2.7.6
+* chunkypipes (http://chunky-pipes.readthedocs.io/en/stable/getting_started.html)
+* PLINK version 1.9 (https://www.cog-genomics.org/plink2)
+__*Software Requirements that can be installed automatically*__
+These requirements are all Python libraries/packages.  Upon installation of the pipeline, the user is given the option for the pipeline to install these dependencies automatically, assuming the user has pip installed on their system (option only available to MAC OSX and Linux operating systems, windows users need to install these libraries manually).
+* SciPy stack, in particular the following Python packages:
+  * pandas
+  * numpy
+  * matplotlib
+* Statistics
+* Seaborn
+* Pillow
+* pyFPDF
+* pyPDF2
 
 ## User Generated File Requirements
 ------------------------------------
 
 ## Installation and Configuration
 ----------------------------------
-
+First chunkypipes should be downloaded from https://pypi.python.org/pypi/ChunkyPipes and follow the installation instructions.  Please note that Mac OS and Linuz users can install chunkypipes via the command line by the following command:
+'''
+pip install chunkypipes
+'''
+Note that sudo privledges will be required for system-wide installs.
 ## Running the Pipeline
 ------------------------
 
