@@ -35,7 +35,7 @@ These requirements are all Python libraries/packages.  Upon installation of the 
 
 ## Installation and Configuration
 ----------------------------------
-**Download and Install chunkypipes**
+**Download and Install chunkypipes**  
 First chunkypipes should be downloaded from https://pypi.python.org/pypi/ChunkyPipes and follow the installation instructions.  Please note that Mac OS and Linux users can install chunkypipes via the command line by the following command:  
 ```
 pip install chunkypipes
@@ -49,7 +49,7 @@ This will initialize the directory for which configured pipelines will be stored
 ```
 > ChunkyPipes successfully initialized at /home/user
 ```
-**Install GWAS QC Pipeline**
+**Install and Configure GWAS QC Pipeline**  
 After chunkypipes has been installed and initialized, the QC pipeline can be installed. First clone this repository into a directory by executing the following commands:
 ```
 mkdir ~/my_project
@@ -98,12 +98,20 @@ pypdf2
 Proceed with dependency installation? [y/n] 
 
 ``` 
-If yes, then the pipeline will install all the listed Python packages, if no, it is assumed the user has manually installed the listed packages.  If not, the pipeline will not work.  Note, this option can only be used if pip is installed on a Mac or Linux operating system.  Windows users must install all these manually or use a Linux virtual machine to run the pipeline.  After this, the pipeline has been successfully configured and installed.  This process will only ever need to be performed once.
+If yes, then the pipeline will install all the listed Python packages, if no, it is assumed the user has manually installed the listed packages.  Be aware that if the packages are not installed or improperly installed, the pipeline will not work.  **NOTE TO WINDOWS USERS!** this option can only be used if pip is installed on a Mac or Linux operating system.  Windows users must install all these manually or use a Linux virtual machine to run the pipeline.  After this, the pipeline has been successfully configured and installed.  This process will only ever need to be performed once.
 
 ## Running the Pipeline
 ------------------------
+**Most Basic Run**  
+As mentioned above there are only three files that are required to run this pipeline.  No arguments besides the arguments specifying the three files need to be called by the user.  If no arguments are set by the user except for the files, everything will be run on the default parameters and threholds.  An example of this most basic usage is shown below:
+```
+chunky run run_GWAS_QC_filtering_pipeline.py -sampleTable /path/to/genomeStudio_Sample_table.txt -snpTable /path/to/genomeStudio_SNPtable.txt -inputPLINK /path/to/plink/file.ped
+```
+The PLINK file can be generated easily using Illumina's GenomeStudio.  GenomeStudio only needs to be used to extract table information and generate a ped file.  No calculations need to be generated from GenomeStudio except for the calculations against the cluster file for SNP cluster membership and for p10GC quality for overall genotyping call rate per sample.  Additionally as long as the sample table and snp table contain the minimal headings and information listed in the file specifications, GenomeStudio is not a dependency.
 
 ___***OPTIONAL ARGUMENTS***___
 
+
 ## Ouput and Deliverables
 --------------------------
+
