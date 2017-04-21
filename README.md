@@ -3,7 +3,7 @@
 ## Overview and Purpose
 ------------------------
 The purpose of this pipeline is to automate the first stage of genotyping quality control and create deliverables for users.  These deliverables are PDF reports regarding QC statistics on the sample and SNP level of a genotyping experiment as well as cleaned PLINK files that can be used for the round 2 of QC analysis as well as downstream analysis.  Although only a single command is used to run the pipeline once it has been installed and configured, it does have two components that run on the backend.
-1. Building and Configuration of  Project  
+1. Building and Configuration of Project  
 2. Running QC Pipeline 
 
 <p align="center">
@@ -159,5 +159,14 @@ There are many options for the user to customize the pipeline for their own pers
 
 ## Ouput and Deliverables
 --------------------------
+There are 3 types of files that are output from this pipeline once it has been successfully completed: PLINK files, PDF reports, text files.  
 
-
+* PLINK files - the original uncleaned PLINK files in bed format and the cleaned PLINK files in bed format that can be used for further downstream QC and analysis.
+* PDF files - there are 4 PDF reports generated.  These reports aim to give the user statistics about the initial round of QC as their data progresses through the pipeline.
+  * project-name_final_summary_report.pdf
+  * project-name_final_detailed_report.pdf
+  * project-name_final_glossary_report.pdf
+  * project-name_final_internal_report.pdf
+* text files - there are two text files generated.
+  * snps_failing_QC_details.txt
+  * samples_failing_QC_details.txt
