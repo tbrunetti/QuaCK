@@ -122,6 +122,21 @@ class Pipeline(BasePipeline):
 				remove_reasons[key].append(value)
 
 		# write this information to PDF
+		if chrm == 'chr Y':
+			pdf_title.set_margins(20, 10, 20)
+			pdf.set_font('Arial', '', 14)
+			pdf.set_x(20)
+			pdf.multi_cell(0, 8, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
+				This was calculated by extracting all " + str(chrm) + ' SNPs from ONLY MALE subjects that pass Illumina QC and calculating the call rate \
+				exclusively on the ' + str(chrm) + ' subset of SNPs', 0, 1, 'L')
+		else:
+			pdf_title.set_margins(20, 10, 20)
+			pdf.set_font('Arial', '', 14)
+			pdf.set_x(20)
+			pdf.multi_cell(0, 8, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
+				This was calculated by extracting all " + str(chrm) + ' SNPs from all Illumina QC passing samples and calculating the call rate \
+				excusively on the ' + str(chrm) + ' subset of SNPs', 0, 1, 'L')
+		
 		pdf.set_font('Arial', 'B', 14)
 		pdf.set_fill_color(200)
 		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs analyzed: " +str(total_snps), 1, 'L', True)
