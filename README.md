@@ -138,6 +138,23 @@ There are many options for the user to customize the pipeline for their own pers
 
 | Pipeline Argument | Default Value | Description |
 | --- | --- | --- |
+| --outDir | current working directory | directory to output results |
+| --projectName | date time of started run | name of project |
+| --arrayType | Illumina MEGA | name of genotyping chip used |
+| --callrate | 0.97 | minimum sample genotying call rate for passing qc|
+| --snp_callrate | 0.97 | minimum snp genotyping call rate for passing qc (Illumina hard-cut off) |
+| --clusterSep | 0.30 | minimum cluster separation for passing qc (Illumina hard-cut off) |
+| --AATmean | 0.30 | maximum mean of normalized AA theta values across snps (Illumina hard-cut off) |
+| --AATdev | 0.06 | maximum allowable AA theta deviation threshold for passing qc (Illumina hard-cut off) |
+| --BBTmean | 0.70 | minimum allowable BB theta mean threshold for passing qc (Illumina hard-cut off) |
+| --BBTdev | 0.06 | maximum allowable BB theta deviation threshold for passing qc (Illumina hard-cut off) |
+| --AARmean | 0.20 | minimum allowable AA mean normalized intensity for passing qc (Illumina hard-cut off) |
+| --ABRmean | 0.20 | minimum allowable AB mean normalized intensity for passing qc (Illumina hard cut off) |
+| --BBRmean | 0.20 | minimum allowable BB mean normalized intensity for passing qc (Illumin hard-cut off) |
+| --genome_build | b37-hg19 | human genome build to use for analysis |
+| --maxFemale | 0.20 | maximum estimated F coefficient for females for sex imputation |
+| --minMale | 0.80 | minimum estimated F coefficient for males for sex imputation |
+| --chipFailure | 1 | maximum number of sex discrepencies on a chip before considered failing |
 
 
 ## Ouput and Deliverables
