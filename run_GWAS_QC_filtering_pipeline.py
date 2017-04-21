@@ -28,7 +28,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--arrayType', default='Illumina MEGA', type=str, help='Name of array or chip used for SNPs')
 		parser.add_argument('--outDir', default=os.getcwd(), type=str, help='[default:current working directory] Full path to output directory, (note a new directory is made in this directory')
 		parser.add_argument('--projectName', default=str(datetime.datetime.now()), type=str, help="Name of project or owner of project")
-		parser.add_argument('--callrate', default=0.97, type=float, help="[default:0.991] minimum call rate to be included in sample set")
+		parser.add_argument('--callrate', default=0.97, type=float, help="[default:0.97] minimum call rate to be included in sample set")
 		parser.add_argument('--snp_callrate', default=0.97, type=float, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
 		parser.add_argument('--clusterSep', default=0.30, type=float, help='[default:0.30] mimimum allowable cluster separation value in order for SNP to be retained (anything equal to or below this value is removed')
 		parser.add_argument('--AATmean', default=0.30, help='[default:0.30] maximum allowable AA T mean threshold in order for SNP to be retained (anything above this value is removed')
