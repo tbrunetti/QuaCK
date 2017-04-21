@@ -127,24 +127,30 @@ class Pipeline(BasePipeline):
 		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs analyzed: " +str(total_snps), 1, 'L', True)
 		pdf.multi_cell(0, 8, "Total samples considered: " +str(total_samples), 1, 'L', True)
 		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs passing call rate threshold:  "+str(total_snps-len(snp_fails)) + '  ' 
-				+ '('+str((float(total_snps-len(snp_fails))/float(total_snps))*100)+'%)', 1, 'L', True)
+				+ '('+str("%.2f" % round((float(total_snps-len(snp_fails))/float(total_snps)), 2)*100)+'%)', 1, 'L', True)
 		pdf.set_font('Arial', '', 14)
 		pdf.multi_cell(0, 8, "Summary Stats on Original Data:", 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Median " + str(chrm) + " missing call rate:  "+ str(stats.median(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Median " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.median(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  "+ str(stats.mean(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.mean(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
 		pdf.set_x(40)	
-		pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  "+ str(stats.stdev(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.stdev(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  "+ str(min(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(min(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  "+ str(max(list(missingness_snp['F_MISS']))*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(max(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
 		
 		pdf.multi_cell(0, 8, '\n\n', 0, 1, 'L')
 
 		return snps_to_remove, remove_reasons
 
+	@staticmethod
+	def check_sum(outdir):
+		with open(outdir+'/md5_check_sum.txt', 'a+') as md5sum_files:
+			for files in os.listdir(outdir):
+				subprocess.call(['md5sum', str(files)], stdout=md5sum_files)
+	
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
 		
@@ -573,3 +579,5 @@ class Pipeline(BasePipeline):
 		print '\n\n' + "Cleaning up project directory"
 		for files in stage_for_deletion:
 			subprocess.call(['rm', '-rf', files])
+
+		self.check_sum(outdir=pipeline_args['outDir'])
