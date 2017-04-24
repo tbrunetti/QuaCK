@@ -356,7 +356,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 		all_batch_callrate = all_batch_callrate + callrate_per_batch
 	# missingness data read data into pandas dataframe
 	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate', 'wellID'])
-	missing_call_dataframe['missing call rate']=missing_call_dataframe['missing call rate'].astype(float)
+	missing_call_dataframe['missing call rate']=missing_call_dataframe['missing call rate'].astype(float)*100
 	missing_genotypes = sns.boxplot(x='missing call rate', y='batch', data=missing_call_dataframe, color=".8")
 	missing_genotypes = sns.stripplot(x='missing call rate', y='batch', data=missing_call_dataframe, jitter=True)
 	sns.plt.suptitle('Overall missing call rate per sample across batches')
@@ -376,13 +376,13 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 		batch_call_averages_paired[batch_name] = temp['missing call rate'].mean() 
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages)*100, 2))+'%', 1, 1, 'L') 
+	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages)*100, 2)), 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages), 2))+'%)', 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages)*100, 2))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages), 2))+'%)', 1, 1, 'L')
 
 	# record chip statistics
 	total_chips = 0
