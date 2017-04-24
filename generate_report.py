@@ -96,12 +96,12 @@ def explanation_of_deliverables(pdf, params):
 	pdf.multi_cell(0, 5, '\n'+params['projectName']+'_final_summary_report.pdf' + '\n' + params['projectName']+'_final_detailed_report.pdf' +'\n' + 
 		params['projectName']+'_final_glossary_report.pdf'+'\n\n', 0, 1, 'L') 
 	pdf.set_x(25)
-	pdf.multi_cell(0, 5, 'The '+params['projectName']+'_final_summary_report.pdf is this current PDF which contains information \
+	pdf.multi_cell(0, 5, '     The '+params['projectName']+'_final_summary_report.pdf is this current PDF which contains information \
 		regarding the explanation of the deliverables and an overall final QC summary page.  This is meant to provide the investigator \
-		with a quick overview of the final number of samples, snps, and genotypes that were analyzed and that passed our QC pipeline. \
-		The ' + params['projectName']+'_final_detailed_report.pdf contains all of the fine details of the samples and snps that pass \
-		the recommended Illumina sample and SNP QC, as well as SNPs that pass call rate thresholds and samples sex concordance. The \
-		information and statistics reported are collected sequentially as the data is pushed through the QC pipeline.  Finally, \
+		with a quick overview of the final number of samples, snps, and genotypes that were analyzed and that passed our QC pipeline. '+'\n' +
+		'     The ' + params['projectName']+'_final_detailed_report.pdf contains all of the fine details of the samples and snps that pass \
+		the recommended Illumina sample and SNP QC, as well as SNPs that pass call rate thresholds and samples sex concordance.  The \
+		information and statistics reported are collected sequentially as the data is pushed through the QC pipeline.' +'\n' + '     Finally, \
 		the '+ params['projectName']+'_final_glossary_report.pdf provides the investigator with an explanation of the parameters and \
 		thresholds that were used in the pipeline.  We have also provided two detailed images of our QC pipeline work flow.  All the details \
 		of how parameters and thresholds are calculated are provided in this document. Additionally, the names of the pipeline parameter names \
@@ -119,12 +119,15 @@ def explanation_of_deliverables(pdf, params):
 	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
 		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' + 'md5_check_sum.txt' + '\n\n', 0, 1, 'L') 
 	pdf.set_x(25)
-	pdf.multi_cell(0, 5, 'The snps_failing_QC_details.txt is a tab-delimited file that contains all the SNPs that were removed due to failing at least \
+	pdf.multi_cell(0, 5, '     The snps_failing_QC_details.txt is a tab-delimited file that contains all the SNPs that were removed due to failing at least \
 		one QC check.  Each line in the first column represents a single SNP name.  Any susequent columns in the line are reasons why the SNP failed. \
 		There may be more than one reason and each reason is a new column.  You will notice a number followed by the reasoning; this number represents \
-		the value that the particular SNP was calculated for that parameter.  Both GenomeStudio text files are files that contain some infomation \
-		that we use in the initial step of our QC pipeline regarding your samples and SNPs.  For more information on what the columns mean please \
-		refer to the glossary report PDF.'+'\n\n', 0, 1, 'J')
+		the value that the particular SNP was calculated for that parameter.' +'\n' + '     The samples_failing_QC_details.txt is formatted similarly to the snps_failing_QC_details.txt \
+		files, except there is an additional column, which is the first column of the files that contains the family ID followed by the second column which \
+		contains the sample ID.' +'\n' + '     Both GenomeStudio text files are files that contain some infomation that we use in the initial step of our QC pipeline \
+		regarding your samples and SNPs.  For more information on what the columns mean please refer to the glossary report PDF.' +'\n' '     Finally, we provide a \
+		md5_check_sums.txt file that lists the md5 check sums of all the generated files to ensure files are not altered or corrupted during the transfer \
+		process.'+'\n\n', 0, 1, 'J')
 
 	# add disclaimer about storage
 	pdf.add_page()
@@ -143,7 +146,7 @@ def explanation_of_deliverables(pdf, params):
 		the event you need access to other files or need something to be re-run.  You will have 2 WEEKS from the date you received the deliverables \
 		to email us with any questions or concerns or to download data that was not provided to you in the zipped files.  After this 2 week window \
 		we will archive all the data and place it on a storage server for 6 months before deleting it from our system.  Please be aware, if you request \
-		access to the archived data you will be charged for download time.  Thank you for your understanding!', 0, 1, 'L')
+		access to the archived data you will be charged for download time.'+'\n\n', 0, 1, 'L')
 	pdf.set_font('Arial', 'BI', 16)
 	pdf.set_x(20)
 	pdf.multi_cell(0, 10, 'QC Analysis', 0, 1, 'L')
@@ -153,7 +156,8 @@ def explanation_of_deliverables(pdf, params):
 		If your data has fewer samples than this we cannot guarantee the parameters are the most optimal.  It is possible that some of the threshold set \
 		may need to be less stringent.  It is up to you to notify us within 2 WEEKS of receiving the reports if you would like to re-run the pipeline under \
 		different threholds.  The pipeline is also publically available on our website at <our.website.edu> if you choose to run the pipeline yourself.  Please \
-		be aware if you ask us to re-run the pipeline on our server after the 2 week mark, you will be charged for additional time.  Thank you. ', 0, 1, 'L')
+		be aware if you ask us to re-run the pipeline on our server after the 2 week mark, you will be charged for additional time.'+'\n\n\n\n\n', 0, 1, 'L')
+	pdf.multi_cell(0, 5,  'Thank you for your understanding and please feel free to contact us with any questions for concerns.', 0, 1, 'L')
 
 
 def thresholds_and_parameters(pdf, params):
@@ -206,11 +210,16 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str("%.2f" % round(basic_call_stats[4]*100, 2)) + '%', 1, 1, 'L')
 	
 
+	
+
+	reason_samples_fail = open(outDir + '/' + 'samples_failing_QC_details.txt', 'w')
 	# create a files called "samples_to_remove.txt" to be passed in proper format to plink for sample removal
 	temp_remove = {x:list(sample_qc_table.loc[sample_qc_table['Sample ID'] == x]['FID']) for x in samples_to_remove}
 	for key in temp_remove:
 		samples_to_remove_text.write(str(temp_remove[key][0]) + '\t' + str(key) + '\n')
+		reason_samples_fail.write(str(temp_remove[key][0]) + '\t' + str(key) + '\t' + str('failed Illumina Sample Missingness: ') + str(list(sample_qc_table[sample_qc_table['Sample ID'] == key]['Call Rate'])[0]) + '\n')
 	samples_to_remove_text.flush() # flushes out buffer
+	reason_samples_fail.flush()
 
 
 	def check_GC_callrate(sampleInfo, cleanup):
@@ -227,11 +236,11 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	
 	check_GC_callrate(sampleInfo=sample_qc_table, cleanup=cleanup)
 
-	return sample_qc_table, samples_to_remove_text, cleanup
+	return sample_qc_table, samples_to_remove_text, reason_samples_fail, cleanup
 
 
 
-def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
+def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 	print "checking sex concordance"
@@ -290,7 +299,19 @@ def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
 	pdf.multi_cell(0, 10, '# of ambiguous samples:  '+str(len(indeterminate_sex)-len(fixed_sex)), 1, 1, 'L')
 
 
-	return cleanup
+	ambiguous_samples = list(set(indeterminate_sex) - set(fixed_sex)) # ambiguous sample IDs onlyq
+
+	with open(reason_samples_fail.name, 'a+') as sex_outliers:
+		for sample in fixed_sex:
+			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['FID'])[0]) + '\t' +str(sample) +'\t' + 
+				'gender_mismatch: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['F'])[0]) +'\n')
+		for ambiguous in ambiguous_samples :
+			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == ambiguous]['FID'])[0]) + '\t' +str(ambiguous) +'\t' + 
+				'ambiguous_gender: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == ambiguous]['F'])[0]) +'\n')
+
+		sex_outliers.flush()
+
+	return sex_outliers, cleanup
 
 def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
