@@ -189,6 +189,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 
 	print "		Writing SNP QC to PDF"	
 	# create running title for SNP quality
+	
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 24)
 	pdf.cell(0, 30, "Illumina SNP Quality Assessment", 0, 1, 'L')
@@ -206,14 +207,14 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.multi_cell(0, 8, "Total missing chromosome ID SNPs analyzed:  "+str(total_missing_chr), 1, 1, 'L')
 	pdf.set_font('Arial', 'B', 14)
 	pdf.multi_cell(0, 8, "Total SNPs passing QC:  "+str(total_snps - len(snps_to_remove)) + ' ' + 
-			'('+str((float(total_snps - len(snps_to_remove))/float(total_snps)) * 100)+'%)' , 1, 'L', True)
+			'('+str("%.2f" % round((float(total_snps - len(snps_to_remove))/float(total_snps)) * 100, 2))+'%)' , 1, 'L', True)
 	pdf.set_font('Arial', '', 14)
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Autosomal SNPs remaining:  "+str(autosomes_remain) + ' (' +str((float(autosomes_remain)/float(total_autosomes))*100)+'%)', 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Autosomal SNPs remaining:  "+str(autosomes_remain) + ' (' +str("%.2f" % round((float(autosomes_remain)/float(total_autosomes))*100, 2))+'%)', 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Non-autosomal SNPs remaining:  "+str(non_auto_remain) + ' (' +str((float(non_auto_remain)/float(total_non_autosomes))*100)+'%)', 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Non-autosomal SNPs remaining:  "+str(non_auto_remain) + ' (' +str("%.2f" % round((float(non_auto_remain)/float(total_non_autosomes))*100, 2))+'%)', 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Missing chromosome ID SNPs remaining:  "+str(missing_remain) + ' (' +str((float(missing_remain)/float(total_missing_chr))*100)+'%)', 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Missing chromosome ID SNPs remaining:  "+str(missing_remain) + ' (' +str("%.2f" % round((float(missing_remain)/float(total_missing_chr))*100, 2))+'%)', 1, 1, 'L')
 	pdf.multi_cell(0, 8, '\n\n\n', 0, 1, 'L')
 	
 
@@ -223,7 +224,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.multi_cell(0, 10, "Cluster Separation Statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.multi_cell(0, 8, "Total SNPs passing cluster separation threshold:  "+str(total_snps_passing_clust) + '  ' 
-			+ '('+str((float(total_snps_passing_clust)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_clust)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
 	pdf.multi_cell(0, 5, "Median cluster separation:  "+ str(all_stats[clus_sep.group(0)][0]), 0, 1, 'L')
@@ -242,7 +243,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.cell(0, 15, "AA T mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA T mean threshold:  "+str(total_snps_passing_AATmean) + '  ' 
-			+ '('+str((float(total_snps_passing_AATmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_AATmean)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
 	pdf.multi_cell(0, 5, "Median normalized AA theta mean:  "+ str(all_stats[AATmean.group(0)][0]), 0, 1, 'L')
@@ -261,7 +262,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.cell(0, 15, "AA T dev score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA T dev threshold:  "+str(total_snps_passing_AATdev) + '  ' 
-			+ '('+str((float(total_snps_passing_AATdev)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_AATdev)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
 	pdf.multi_cell(0, 5, "Median normalized AA theta deviation:  "+ str(all_stats[AATdev.group(0)][0]), 0, 1, 'L')
@@ -281,7 +282,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.cell(0, 15, "BB T mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB T mean threshold:  "+str(total_snps_passing_BBTmean) + '  ' 
-			+ '('+str((float(total_snps_passing_BBTmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_BBTmean)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
 	pdf.multi_cell(0, 5, "Median normalized BB theta mean:  "+ str(all_stats[BBTmean.group(0)][0]), 0, 1, 'L')
@@ -301,7 +302,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.cell(0, 15, "BB T dev score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB T dev threshold:  "+str(total_snps_passing_BBTdev) + '  ' 
-			+ '('+str((float(total_snps_passing_BBTdev)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_BBTdev)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
@@ -322,7 +323,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.cell(0, 15, "AA R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AA R mean threshold:  "+str(total_snps_passing_AARmean) + '  ' 
-			+ '('+str((float(total_snps_passing_AARmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_AARmean)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
 	pdf.multi_cell(0, 5, "Median normalized AA intesity mean:  "+ str(all_stats[AARmean.group(0)][0]), 0, 1, 'L')
@@ -343,7 +344,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.cell(0, 15, "AB R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing AB R mean threshold:  "+str(total_snps_passing_ABRmean) + '  ' 
-			+ '('+str((float(total_snps_passing_ABRmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_ABRmean)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
 	pdf.multi_cell(0, 5, "Median normalized AB intesity mean:  "+ str(all_stats[ABRmean.group(0)][0]), 0, 1, 'L')
@@ -362,7 +363,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.cell(0, 15, "BB R mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.cell(0, 8, "Total SNPs passing BB R mean threshold:  "+str(total_snps_passing_BBRmean) + '  ' 
-			+ '('+str((float(total_snps_passing_BBRmean)/float(total_snps))*100)+'%)', 0, 1, 'L')
+			+ '('+str("%.2f" % round((float(total_snps_passing_BBRmean)/float(total_snps))*100, 2))+'%)', 0, 1, 'L')
 
 	pdf.multi_cell(0, 8, "Summary Stats on Original Data:")
 	pdf.set_x(40)
