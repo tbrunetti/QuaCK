@@ -114,9 +114,10 @@ def explanation_of_deliverables(pdf, params):
 	pdf.multi_cell(0, 10, 'Text Files', 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.set_x(25)
-	pdf.multi_cell(0, 5, 'Three text files are provided:', 0, 1, 'J')
+	pdf.multi_cell(0, 5, 'Six text files are provided:', 0, 1, 'J')
 	pdf.set_x(35)
-	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'GenomeStudio_samples_table.txt' + '\n' + 'GenomeStudio_SNPs_table.txt' +'\n\n', 0, 1, 'L') 
+	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
+		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' + 'md5_check_sum.txt' + '\n\n', 0, 1, 'L') 
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, 'The snps_failing_QC_details.txt is a tab-delimited file that contains all the SNPs that were removed due to failing at least \
 		one QC check.  Each line in the first column represents a single SNP name.  Any susequent columns in the line are reasons why the SNP failed. \
@@ -124,6 +125,35 @@ def explanation_of_deliverables(pdf, params):
 		the value that the particular SNP was calculated for that parameter.  Both GenomeStudio text files are files that contain some infomation \
 		that we use in the initial step of our QC pipeline regarding your samples and SNPs.  For more information on what the columns mean please \
 		refer to the glossary report PDF.'+'\n\n', 0, 1, 'J')
+
+	# add disclaimer about storage
+	pdf.add_page()
+	pdf.set_margins(20, 10, 20)
+	pdf.set_font('Arial', 'B', 24)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 30, "Data Storage and Analysis Disclaimer", 0, 1, 'L')
+	pdf.line(20, 32, 190, 32)
+	pdf.set_font('Arial', 'BI', 16)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 10, 'Data Storage', 0, 1, 'L')
+	pdf.set_font('Arial', '', 12)
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'Due to the nature of the size of these data sets, we can only keep them on our FTP servers for a limited time before we \
+		archive them to save on space.  With that in mind, we would like you to please take a look at the deliverables and files immediately in \
+		the event you need access to other files or need something to be re-run.  You will have 2 WEEKS from the date you received the deliverables \
+		to email us with any questions or concerns or to download data that was not provided to you in the zipped files.  After this 2 week window \
+		we will archive all the data and place it on a storage server for 6 months before deleting it from our system.  Please be aware, if you request \
+		access to the archived data you will be charged for download time.  Thank you for your understanding!', 0, 1, 'L')
+	pdf.set_font('Arial', 'BI', 16)
+	pdf.set_x(20)
+	pdf.multi_cell(0, 10, 'QC Analysis', 0, 1, 'L')
+	pdf.set_font('Arial', '', 12)
+	pdf.set_x(25)
+	pdf.multi_cell(0, 5, 'The default parameters set on this pipeline have been tested and optimized for studies that have a minimum of 500 samples. \
+		If your data has fewer samples than this we cannot guarantee the parameters are the most optimal.  It is possible that some of the threshold set \
+		may need to be less stringent.  It is up to you to notify us within 2 WEEKS of receiving the reports if you would like to re-run the pipeline under \
+		different threholds.  The pipeline is also publically available on our website at <our.website.edu> if you choose to run the pipeline yourself.  Please \
+		be aware if you ask us to re-run the pipeline on our server after the 2 week mark, you will be charged for additional time.  Thank you. ', 0, 1, 'L')
 
 
 def thresholds_and_parameters(pdf, params):
@@ -165,15 +195,15 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	pdf.multi_cell(0, 8, "Number of samples passing missing call rate threshold:  "+str(total_samples-len(samples_to_remove)), 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, 'Median call rate:  '+str(basic_call_stats[0]), 1, 1, 'L')
+	pdf.multi_cell(0, 8, 'Median call rate:  '+str("%.2f" % round(basic_call_stats[0]*100, 2)) + '%', 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Mean call rate:  "+ str(basic_call_stats[1]), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Mean call rate:  "+ str("%.2f" % round(basic_call_stats[1]*100, 2)) + '%', 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Standard deviation call rate:  "+ str(basic_call_stats[2]), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Standard deviation call rate:  "+ str("%.2f" % round(basic_call_stats[2]*100, 2)) + '%', 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Minimum call rate:  "+ str(basic_call_stats[3]), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Minimum call rate:  "+ str("%.2f" % round(basic_call_stats[3]*100, 2)) + '%', 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str(basic_call_stats[4]), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str("%.2f" % round(basic_call_stats[4]*100, 2)) + '%', 1, 1, 'L')
 	
 
 	# create a files called "samples_to_remove.txt" to be passed in proper format to plink for sample removal
@@ -208,6 +238,7 @@ def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 24)
 	pdf.set_margins(20, 10, 20)
+	pdf.set_x(20)
 	pdf.multi_cell(0, 30, "Overall Sex Concordance Check", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
@@ -254,9 +285,9 @@ def graph_sexcheck(pdf, sexcheck, maxF, minM, outDir, cleanup):
 	pdf.multi_cell(0, 10, 'Total Number of Discrepencies:  '+str(len(indeterminate_sex)), 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
-	pdf.multi_cell(0, 10, '# of samples that can likely be fixed:  '+str(len(fixed_sex)), 1, 1, 'L')
+	pdf.multi_cell(0, 10, '# of outlier samples with clear gender mismatches:  '+str(len(fixed_sex)), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 10, '# of samples that need to be removed:  '+str(len(indeterminate_sex)-len(fixed_sex)), 1, 1, 'L')
+	pdf.multi_cell(0, 10, '# of ambiguous samples:  '+str(len(indeterminate_sex)-len(fixed_sex)), 1, 1, 'L')
 
 
 	return cleanup
@@ -441,7 +472,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 		else:
 			pdf.set_font('Arial', 'B', 14)
 			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str((float(contradictions['OK'])/float(len(batch_sex[key])))*100)+'%', 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str("%.2f" % round((float(contradictions['OK'])/float(len(batch_sex[key])))*100, 2))+'%', 0, 1, 'L')
 			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
 			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
 			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
