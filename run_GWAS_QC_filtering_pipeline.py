@@ -123,17 +123,17 @@ class Pipeline(BasePipeline):
 
 		# write this information to PDF
 		if chrm == 'chr Y':
-			pdf_title.set_margins(20, 10, 20)
+			pdf.set_margins(20, 10, 20)
 			pdf.set_font('Arial', '', 14)
 			pdf.set_x(20)
-			pdf.multi_cell(0, 8, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
+			pdf.multi_cell(0, 5, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
 				This was calculated by extracting all " + str(chrm) + ' SNPs from ONLY MALE subjects that pass Illumina QC and calculating the call rate \
 				exclusively on the ' + str(chrm) + ' subset of SNPs', 0, 1, 'L')
 		else:
-			pdf_title.set_margins(20, 10, 20)
+			pdf.set_margins(20, 10, 20)
 			pdf.set_font('Arial', '', 14)
 			pdf.set_x(20)
-			pdf.multi_cell(0, 8, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
+			pdf.multi_cell(0, 5, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
 				This was calculated by extracting all " + str(chrm) + ' SNPs from all Illumina QC passing samples and calculating the call rate \
 				excusively on the ' + str(chrm) + ' subset of SNPs', 0, 1, 'L')
 		
@@ -142,29 +142,32 @@ class Pipeline(BasePipeline):
 		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs analyzed: " +str(total_snps), 1, 'L', True)
 		pdf.multi_cell(0, 8, "Total samples considered: " +str(total_samples), 1, 'L', True)
 		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs passing call rate threshold:  "+str(total_snps-len(snp_fails)) + '  ' 
-				+ '('+str("%.2f" % round((float(total_snps-len(snp_fails))/float(total_snps)), 2)*100)+'%)', 1, 'L', True)
+				+ '('+str("%.2f" % round((float(total_snps-len(snp_fails))/float(total_snps))*100, 2))+'%)', 1, 'L', True)
 		pdf.set_font('Arial', '', 14)
 		pdf.multi_cell(0, 8, "Summary Stats on Original Data:", 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Median " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.median(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Median " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.median(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.mean(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.mean(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		pdf.set_x(40)	
-		pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.stdev(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.stdev(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(min(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(min(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(max(list(missingness_snp['F_MISS'])), 2)*100)+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(max(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		
-		pdf.multi_cell(0, 8, '\n\n', 0, 1, 'L')
+		pdf.multi_cell(0, 8, '\n', 0, 1, 'L')
 
 		return snps_to_remove, remove_reasons
 
 	@staticmethod
-	def check_sum(outdir):
-		with open(outdir+'/md5_check_sum.txt', 'a+') as md5sum_files:
-			for files in os.listdir(outdir):
-				subprocess.call(['md5sum', str(files)], stdout=md5sum_files)
+	def check_sum(outdir, projectName):
+		with open(outdir + '/' + projectName + '/md5_check_sum.txt', 'a+') as md5sum_files:
+			for files in os.listdir(outdir + '/' + projectName):
+				if files == 'md5_check_sum.txt':
+					continue;
+				else:
+					subprocess.call(['md5sum', outdir+'/'+projectName+'/'+str(files)], stdout=md5sum_files)
 	
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
@@ -595,4 +598,4 @@ class Pipeline(BasePipeline):
 		for files in stage_for_deletion:
 			subprocess.call(['rm', '-rf', files])
 
-		self.check_sum(outdir=pipeline_args['outDir'])
+		self.check_sum(outdir=pipeline_args['outDir'], projectName=pipeline_args['projectName'])
