@@ -124,14 +124,14 @@ class Pipeline(BasePipeline):
 		# write this information to PDF
 		if chrm == 'chr Y':
 			pdf.set_margins(20, 10, 20)
-			pdf.set_font('Arial', '', 14)
+			pdf.set_font('Arial', '', 12)
 			pdf.set_x(20)
 			pdf.multi_cell(0, 5, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
 				This was calculated by extracting all " + str(chrm) + ' SNPs from ONLY MALE subjects that pass Illumina QC and calculating the call rate \
 				exclusively on the ' + str(chrm) + ' subset of SNPs', 0, 1, 'L')
 		else:
 			pdf.set_margins(20, 10, 20)
-			pdf.set_font('Arial', '', 14)
+			pdf.set_font('Arial', '', 12)
 			pdf.set_x(20)
 			pdf.multi_cell(0, 5, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
 				This was calculated by extracting all " + str(chrm) + ' SNPs from all Illumina QC passing samples and calculating the call rate \
@@ -205,7 +205,7 @@ class Pipeline(BasePipeline):
 		pdf_title.cell(0, 10, 'Project:  '+ str(pipeline_args['projectName']), 0, 1, 'C')
 		pdf_title.cell(0, 10, 'Array/Chip:  '+ str(pipeline_args['arrayType']), 0, 1, 'C')
 		pdf_title.cell(0, 10, 'Date:  '+str(datetime.date.today()), 0, 1, 'C')
-		pdf_title.image("/home/tonya/Pictures/transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
+		pdf_title.image("transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
 
 		generate_report.explanation_of_deliverables(pdf=pdf_title, params=pipeline_args)
 
@@ -220,7 +220,7 @@ class Pipeline(BasePipeline):
 		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		sample_qc_table, remove_samples_text, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
+		sample_qc_table, remove_samples_text, reason_samples_fail, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		snps_to_remove, reasons_snps_fail = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
 					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
@@ -292,9 +292,9 @@ class Pipeline(BasePipeline):
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', 'MT'),
-			Parameter('--remove', outdir+'/males_and_unknowns_by_ped.txt'),
+			Parameter('--remove', outdir+'/unknown_by_ped.txt'),
 			Parameter('--make-bed'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only')
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed')
 			)
 
 		# all samples plink file in BED FORMAT and extract unknown chromosomes (0)
@@ -327,9 +327,9 @@ class Pipeline(BasePipeline):
 			)
 		# get missingness statistics exclusively from MT females only
 		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only'),
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed'),
 			Parameter('--missing'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only')
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed')
 			)
 
 		# get missingness statistics exclusively from uknown chromosomal SNPs
@@ -370,7 +370,7 @@ class Pipeline(BasePipeline):
 
 		# chrMT call rate calculate and publish to callrate_pdf
 		snps_to_remove, reasons_snps_fail = self.call_rate(
-			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.imiss', 
+			missingnessSNP=pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.lmiss', missingnessSample=pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.imiss', 
 			callrate=pipeline_args['snp_callrate'], snps_to_remove=snps_to_remove, remove_reasons=reasons_snps_fail,
 			pdf=callrate_pdf, chrm='chr MT'
 			)
@@ -396,13 +396,13 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bed')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bim')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.fam')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.bed')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.bim')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.fam')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.bed')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.bim')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.fam')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.lmiss')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.imiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.lmiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_females_only.imiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.lmiss')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.imiss')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bed')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bim')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.fam')
@@ -455,7 +455,7 @@ class Pipeline(BasePipeline):
 
 		overall_sex_pdf = FPDF()
 		# not imbedded in Illumina Sample check because uses own input files
-		stage_for_deletion = generate_report.graph_sexcheck(pdf=overall_sex_pdf, sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
+		reason_samples_fail, stage_for_deletion = generate_report.graph_sexcheck(pdf=overall_sex_pdf, reason_samples_fail=reason_samples_fail, sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		pdf_internal_batch = FPDF()
 		# checks sex and call rate at the batch level
@@ -478,7 +478,7 @@ class Pipeline(BasePipeline):
 		pdf_internal_cover_page.cell(0, 10, 'Project:  '+ str(pipeline_args['projectName']), 0, 1, 'C')
 		pdf_internal_cover_page.cell(0, 10, 'Array/Chip:  '+ str(pipeline_args['arrayType']), 0, 1, 'C')
 		pdf_internal_cover_page.cell(0, 10, 'Date:  '+str(datetime.date.today()), 0, 1, 'C')
-		pdf_internal_cover_page.image("/home/tonya/Pictures/transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
+		pdf_internal_cover_page.image("transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
 
 
 		# create cover page for detailed report
@@ -495,7 +495,7 @@ class Pipeline(BasePipeline):
 		pdf_detailed_cover.cell(0, 10, 'Project:  '+ str(pipeline_args['projectName']), 0, 1, 'C')
 		pdf_detailed_cover.cell(0, 10, 'Array/Chip:  '+ str(pipeline_args['arrayType']), 0, 1, 'C')
 		pdf_detailed_cover.cell(0, 10, 'Date:  '+str(datetime.date.today()), 0, 1, 'C')
-		pdf_detailed_cover.image("/home/tonya/Pictures/transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
+		pdf_detailed_cover.image("transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
 
 
 		# create cover page for glossary report
@@ -512,7 +512,7 @@ class Pipeline(BasePipeline):
 		pdf_glossary_cover.cell(0, 10, 'Project:  '+ str(pipeline_args['projectName']), 0, 1, 'C')
 		pdf_glossary_cover.cell(0, 10, 'Array/Chip:  '+ str(pipeline_args['arrayType']), 0, 1, 'C')
 		pdf_glossary_cover.cell(0, 10, 'Date:  '+str(datetime.date.today()), 0, 1, 'C')
-		pdf_glossary_cover.image("/home/tonya/Pictures/transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
+		pdf_glossary_cover.image("transparent_AMC_cropped.png", x=10, y=245, w=190, h=45)
 
 
 
@@ -569,6 +569,7 @@ class Pipeline(BasePipeline):
 
 		
 		# remove extraneous intermediate files
+		stage_for_deletion.append(outdir + '/samples_to_remove.txt')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf')
 		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
