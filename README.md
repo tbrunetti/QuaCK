@@ -78,8 +78,8 @@ After chunkypipes has been installed and initialized, the QC pipeline can be ins
 ```
 mkdir ~/my_project
 cd ~/my_project
-git clone https://github.com/tbrunetti/GWAS_QC_pipeline_ver_1.0.git
-cd GWAS_QC_pipeline_ver_1.0
+git clone https://github.com/tbrunetti/GWAS_QC_pipeline.git
+cd GWAS_QC_pipeline
 ```
 Assuming chunkypipes has been installed correctly, run the following command to configure the pipeline:
 ```
@@ -167,6 +167,7 @@ There are 3 types of files that are output from this pipeline once it has been s
   * project-name_final_detailed_report.pdf
   * project-name_final_glossary_report.pdf
   * project-name_final_internal_report.pdf
-* text files - there are two text files generated.
+* text files - there are three text files generated.
   * snps_failing_QC_details.txt
   * samples_failing_QC_details.txt
+  * md5_check_sum.txt
