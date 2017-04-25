@@ -41,7 +41,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--genome_build', default='b37-hg19', type=str, help='[default:b37-hg19], genome build options: b36-hg18, b37-hg19, b38-hg38')
 		parser.add_argument('--maxFemale', default=0.20, type=float, help='[default:0.20] F scores below this value will be imputed as female subjects based on X-chromosome imputation')
 		parser.add_argument('--minMale', default=0.80, type=float, help='[default:0.80] F scores above this value will be imputed as male subjects based on X-chromosome imputation')
-		parser.add_argument('--chipFailure', default=1, type=int, help='[default:1] Maximum number of sex discrepencies a chip can have before considered failing')
+		parser.add_argument('--chipFailure', default=1, type=int, help='[default:1] Maximum number of sex discrepencies or missigness threshold fails a chip can have before considered failing')
 
 	@staticmethod
 	def check_input_format(inputPlinkfile, plink):
@@ -220,7 +220,7 @@ class Pipeline(BasePipeline):
 		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
 		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
 		# no actual removal happens here, just list removal and records statistics in PDF
-		sample_qc_table, remove_samples_text, reason_samples_fail, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
+		sample_qc_table, remove_samples_text, reason_samples_fail, sample_fail_locations, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		snps_to_remove, reasons_snps_fail = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
 					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
@@ -459,7 +459,8 @@ class Pipeline(BasePipeline):
 		
 		pdf_internal_batch = FPDF()
 		# checks sex and call rate at the batch level
-		stage_for_deletion, failed_chips, batch_summary = generate_report.batch_effects(pdf=pdf_internal_batch, chipFail=pipeline_args['chipFailure'], sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'_passing_QC.imiss', outDir=outdir, cleanup=stage_for_deletion)
+		stage_for_deletion, failed_chips, batch_summary = generate_report.batch_effects(pdf=pdf_internal_batch, chipFail=pipeline_args['chipFailure'], sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'_passing_QC.imiss', 
+			chip_missingness_fails=sample_fail_locations, outDir=outdir, cleanup=stage_for_deletion)
 		
 
 
