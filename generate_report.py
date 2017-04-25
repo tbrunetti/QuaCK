@@ -210,7 +210,8 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str("%.2f" % round(basic_call_stats[4]*100, 2)) + '%', 1, 1, 'L')
 	
 
-	
+	# store batch and chip number of sample that fails missingness threshold
+	chips_fail_missingness_check = {}
 
 	reason_samples_fail = open(outDir + '/' + 'samples_failing_QC_details.txt', 'w')
 	# create a files called "samples_to_remove.txt" to be passed in proper format to plink for sample removal
@@ -218,9 +219,18 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	for key in temp_remove:
 		samples_to_remove_text.write(str(temp_remove[key][0]) + '\t' + str(key) + '\n')
 		reason_samples_fail.write(str(temp_remove[key][0]) + '\t' + str(key) + '\t' + str('failed Illumina Sample Missingness: ') + str(list(sample_qc_table[sample_qc_table['Sample ID'] == key]['Call Rate'])[0]) + '\n')
+		# get chips that are failing missingness key is batch list is chip number
+		if re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', key):
+			batch_id = re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', key)
+			try:
+				chipID = [str(batch_id.group(2))[1:]]
+				chips_fail_missingness_check.setdefault(batch_id.group(1), []).extend(chipID)
+			except TypeError: # in the event the dictionary is not iterable (list)
+				chips_fail_missingness_check[batch_id.group(1)].append(chipID)
+		
 	samples_to_remove_text.flush() # flushes out buffer
 	reason_samples_fail.flush()
-
+	
 
 	def check_GC_callrate(sampleInfo, cleanup):
 		warnings.simplefilter(action = "ignore", category = FutureWarning)
@@ -236,7 +246,7 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	
 	check_GC_callrate(sampleInfo=sample_qc_table, cleanup=cleanup)
 
-	return sample_qc_table, samples_to_remove_text, reason_samples_fail, cleanup
+	return sample_qc_table, samples_to_remove_text, reason_samples_fail, chips_fail_missingness_check, cleanup
 
 
 
@@ -313,7 +323,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 
 	return sex_outliers, cleanup
 
-def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
+def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 	batch_summary = FPDF()
@@ -346,8 +356,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 	batch_summary.set_font('Arial', 'B', 16)
 	batch_summary.set_fill_color(200)
 	batch_summary.multi_cell(0, 10, 'Total Number of Batches:  ' +  str(len(batch_sex)), 1, 'L', True)
-	batch_summary.multi_cell(0, 10, 'Batch Sample Missingness Statistics:  ', 1, 'L', True)
-
+	
 
 	# missingness data format data for seaborn boxplot/strip plot
 	all_batch_callrate = []
@@ -365,8 +374,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 	plt.close()
 	batch_summary.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=140, w=190, h=150)
 	cleanup.append(outDir+'/'+'missing_call_rate_samples.png')  # puts image in line for deletion; happens after final PDF has been generated
-
 	
+
 	# get sample missingness statistics across batches
 	batch_call_averages = []
 	batch_call_averages_paired = {}
@@ -374,16 +383,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 		temp = missing_call_dataframe.loc[missing_call_dataframe['batch'].isin([batch_name])]
 		batch_call_averages.append(temp['missing call rate'].mean())
 		batch_call_averages_paired[batch_name] = temp['missing call rate'].mean() 
-	batch_summary.set_font('Arial', '', 14)
-	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
-	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
-	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages), 2))+'%)', 1, 1, 'L')
-	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages), 2))+'%)', 1, 1, 'L')
-
+	
 	# record chip statistics
 	total_chips = 0
 	total_chips_fail = 0 # fail is when chip has 2 or more sex discrepancies
@@ -555,13 +555,41 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, outDir, cleanup):
 			cleanup.append(outDir+'/'+'problem_rows'+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 			cleanup.append(outDir+'/'+"problem_chips"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
+	# get number of chips failing missingness threshold
+	chip_fails_from_missigness = 0
+	for key, value in chip_missingness_fails.iteritems():
+		chip, num_occ = collections.Counter(value).most_common(1)[0]
+		if num_occ > chipFail:
+			most_freq_fails = collections.Counter(value).most_common()
+			while len(most_freq_fails) != 0 and most_freq_fails[0][1] > chipFail:
+				chip_fails_from_missigness = chip_fails_from_missigness +1
+				most_freq_fails.pop(0)
+		else:
+			continue
+
+	
 	batch_summary.set_font('Arial', 'B', 16)
 	batch_summary.set_fill_color(200)
 	batch_summary.multi_cell(0, 10, 'Total Number of Chips:  ' +  str(total_chips), 1, 'L', True)
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, 'Total Number Failing: ' + str(total_chips_fail), 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Sex: ' + str(total_chips_fail), 1, 1, 'L')
+	batch_summary.set_font('Arial', '', 14)
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Missingness: ' + str(chip_fails_from_missigness), 1, 1, 'L')
 
+	batch_summary.set_font('Arial', 'B', 16)
+	batch_summary.set_fill_color(200)
+	batch_summary.multi_cell(0, 10, 'Batch Sample Missingness Statistics:  ', 1, 'L', True)
+	batch_summary.set_font('Arial', '', 14)
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages), 2))+'%)', 1, 1, 'L')
+	batch_summary.set_x(40)
+	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages), 2))+'%)', 1, 1, 'L')
 
 
 	return cleanup, failing_chip_IDs, batch_summary
