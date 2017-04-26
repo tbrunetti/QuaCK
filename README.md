@@ -154,7 +154,7 @@ There are many options for the user to customize the pipeline for their own pers
 | --genome_build | b37-hg19 | human genome build to use for analysis |
 | --maxFemale | 0.20 | maximum estimated F coefficient for females for sex imputation |
 | --minMale | 0.80 | minimum estimated F coefficient for males for sex imputation |
-| --chipFailure | 1 | maximum number of sex discrepencies on a chip before considered failing |
+| --chipFailure | 1 | maximum number of sex discrepencies and failed sample missingness threshold  on a chip before considered failing |
 
 
 ## Ouput and Deliverables
