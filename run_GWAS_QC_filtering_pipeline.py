@@ -181,7 +181,8 @@ class Pipeline(BasePipeline):
 		import generate_illumina_snp_stats
 		import PyPDF2
 		from fpdf import FPDF
-		
+		import re
+
 		# specifying output location and conflicting project names of files generated	
 		try:
 			os.stat(pipeline_args['outDir']+'/'+pipeline_args['projectName'])
@@ -262,6 +263,72 @@ class Pipeline(BasePipeline):
 			)
 
 		stage_for_deletion.append(outdir+'/snps_to_remove_illumina.txt')
+
+
+		######## now perform trio and duplication checks here #########
+
+		# get FID, IID of trio locations:
+		get_trios = open(outdir + '/get_trios.txt', 'w')
+		get_dups = open(outdir + '/check_dups.txt', 'w')
+		fam_file = pandas.read_table(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam', delim_whitespace=True, header=None, names=['FID', 'IID', 'PED', 'MAT', 'GEN', 'AFF'])
+		for iid in list(fam_file['IID']):
+			print iid
+			if re.search('([A-Z]*[a-z]*[0-9]*)-DNA_(B01|B06|B12).*', iid):
+				fid = list(fam_file[fam_file['IID'] == iid]['FID'])
+				get_trios.write(str(fid[0]) + ' ' + str(iid) + '\n')
+			elif re.search('([A-Z]*[a-z]*[0-9]*)-DNA_(A01|A06|A12).*', iid):
+				fid = list(fam_file[fam_file['IID'] == iid]['FID'])
+				get_dups.write(str(fid[0]) + ' ' + str(iid) + '\n')
+			else:
+				continue;
+
+		get_trios.flush()
+		get_dups.flush()
+		print "finished_trios"
+
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
+			Parameter('--keep', os.path.realpath(get_trios.name)),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_trios_only')
+			)
+
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
+			Parameter('--keep', os.path.realpath(get_dups.name)),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only')
+			)
+		
+		# trio concordance check
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only'),
+			Parameter('--bmerge', ),
+			Parameter('--merge-mode', '7'),
+			Parameter('--out', outdir + '/trio_concordance_1000genomes')
+			)
+
+		# .lmendel is one line per variant [CHR, SNP, N]
+		# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
+		# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_trios_only'),
+			Parameter('--mendel')
+			)
+
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only'),
+			Parameter('--genome', 'full'),
+			Parameter('--out', outdir+'/dup_concordance_check')
+			)
+
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_trios_only*')
+		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only*')
+
+
+		
+
+
 		########## make plink files for missingness RECALCULATED POST-ILLUMINA SNP QC ###########
 		
 		# all samples autosomal only
