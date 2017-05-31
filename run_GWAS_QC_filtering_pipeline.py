@@ -265,11 +265,67 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(outdir+'/snps_to_remove_illumina.txt')
 
 
-		######## now perform trio and duplication checks here #########
+		######## now perform trio and duplication concordance here #########
+		#place here so plink can be placed within scope of .run and Software calls made my pipeline
+		def check_concordance(outDir, plinkFile, refIdFile, dupIdFile, outputDict):
+			cleanup = []
+			refIdFile_trunc = refIdFile.split('/')[-1] # shorten names so not to save full path
+			dupIdFile_trunc = dupIdFile.split('/')[-1]
+			outputDict[str(refIdFile_trunc)] = [str(dupIdFile_trunc)] # key=known postion of iid, value is list [0]=unknown dup with iid
 
-		# get FID, IID of trio locations:
+			for x in [refIdFile, dupIdFile]:
+				plink_general.run(
+					Parameter('--bfile', str(plinkFile)),
+					Parameter('--keep', str(x)),
+					Parameter('--make-bed'),
+					Parameter('--out', str(x))
+					)
+
+
+			plink_general.run(
+				Parameter('--bfile', str(refIdFile)),
+				Parameter('--bmerge', str(dupIdFile)),
+				Parameter('--merge-mode', '6'), # all mismatching calls including missing calls
+				Parameter('--out', str(refIdFile)+'_concordance_dup')
+				)
+
+			extract_lines = subprocess.Popen(['tail', '-4', str(refIdFile)+'_concordance_dup.log'], stdout=subprocess.PIPE)
+			get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
+			print get_concordance
+
+			# regex to sift through the concorance lines from above
+			overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
+			nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
+			concordant = re.search('([0-9]*)\sconcordant', get_concordance)
+			concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(\.[0-9]*|[0-9]*)', get_concordance)
+			print overlaps.group(0)
+			print nonmissing.group(0)
+			print concordant.group(0)
+			print concordant_rate.group(0)
+			outputDict[str(refIdFile_trunc)].extend([overlaps.group(1), nonmissing.group(1), concordant.group(1), concordant_rate.group(1)])
+
+
+			print outputDict
+
+			cleanup.append(str(refIdFile))
+			cleanup.append(str(refIdFile)+'.bed')
+			cleanup.append(str(refIdFile)+'.bim')
+			cleanup.append(str(refIdFile)+'.fam')
+			cleanup.append(str(dupIdFile))
+			cleanup.append(str(dupIdFile)+'.bed')
+			cleanup.append(str(dupIdFile)+'.bim')
+			cleanup.append(str(dupIdFile)+'.fam')
+			
+			for files in cleanup:
+				subprocess.call(['rm', '-rf', files])
+
+			return outputDict
+
+
+		# get FID, IID of dupicate trio locations:
 		get_trios = open(outdir + '/get_trios.txt', 'w')
-		get_dups = open(outdir + '/check_dups.txt', 'w')
+		#get_dups = open(outdir + '/check_dups.txt', 'w')
+		iid_dups = {}
 		fam_file = pandas.read_table(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam', delim_whitespace=True, header=None, names=['FID', 'IID', 'PED', 'MAT', 'GEN', 'AFF'])
 		for iid in list(fam_file['IID']):
 			print iid
@@ -278,32 +334,51 @@ class Pipeline(BasePipeline):
 				get_trios.write(str(fid[0]) + ' ' + str(iid) + '\n')
 			elif re.search('([A-Z]*[a-z]*[0-9]*)-DNA_(A01|A06|A12).*', iid):
 				fid = list(fam_file[fam_file['IID'] == iid]['FID'])
-				get_dups.write(str(fid[0]) + ' ' + str(iid) + '\n')
+				iid_dups[iid] = fid[0]
+				#get_dups.write(str(fid[0]) + ' ' + str(iid) + '\n')
 			else:
 				continue;
 
 		get_trios.flush()
-		get_dups.flush()
-		print "finished_trios"
+		#get_dups.flush()
 
+		# plink file of just the trio samples
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--keep', os.path.realpath(get_trios.name)),
 			Parameter('--make-bed'),
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_trios_only')
 			)
-
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
-			Parameter('--keep', os.path.realpath(get_dups.name)),
-			Parameter('--make-bed'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only')
-			)
 		
+		#------------------------------------------------------------------------------------------------------
+		# check duplicate concordance
+		concordance_output = {}
+		for key, value in iid_dups.iteritems():
+			batch, well, sampleID = key.split('_')
+			known_pos = open(outdir + '/known_pos_'+str(key), 'w')
+			known_pos.write(str(value) + '\t' + str(key) +'\n')
+			known_pos.flush()
+			
+			batch, well, sampleID = key.split('_')
+			for iid in list(fam_file['IID']):
+				batch2, well2, sampleID2 = iid.split('_')
+				if sampleID == sampleID2:
+				#if sampleID == sampleID2 and well != well2:
+					unknown_pos = open(outdir + '/unknown_pos_'+str(iid), 'w')
+					fid = list(fam_file[fam_file['IID'] == iid]['FID'])
+					unknown_pos.write(str(fid[0]) + '\t' + str(iid) + '\n')
+					unknown_pos.flush()
+
+					
+					concordance_output = check_concordance(outDir=outdir, plinkFile=pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC', 
+								refIdFile=known_pos.name, dupIdFile=unknown_pos.name, outputDict=concordance_output)
+
+		#----------------------------------------------------------------------------------------------------------
+		'''
 		# trio concordance check
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only'),
-			Parameter('--bmerge', ),
+			Parameter('--bmerge', '<insert name of 1000 genomes here>'),
 			Parameter('--merge-mode', '7'),
 			Parameter('--out', outdir + '/trio_concordance_1000genomes')
 			)
@@ -324,11 +399,11 @@ class Pipeline(BasePipeline):
 
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_trios_only*')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only*')
-
+		'''
 
 		
 
-
+		'''
 		########## make plink files for missingness RECALCULATED POST-ILLUMINA SNP QC ###########
 		
 		# all samples autosomal only
@@ -668,3 +743,4 @@ class Pipeline(BasePipeline):
 			subprocess.call(['rm', '-rf', files])
 
 		self.check_sum(outdir=pipeline_args['outDir'], projectName=pipeline_args['projectName'])
+		'''
