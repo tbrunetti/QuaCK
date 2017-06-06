@@ -27,7 +27,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('-inputPLINK', required=True, type=str, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
 		parser.add_argument('--arrayType', default='Illumina MEGA', type=str, help='Name of array or chip used for SNPs')
 		parser.add_argument('--outDir', default=os.getcwd(), type=str, help='[default:current working directory] Full path to output directory, (note a new directory is made in this directory')
-		parser.add_argument('--projectName', default=str(datetime.datetime.now()), type=str, help="Name of project or owner of project")
+		parser.add_argument('--projectName', default=str(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")), type=str, help="Name of project or owner of project")
 		parser.add_argument('--callrate', default=0.97, type=float, help="[default:0.97] minimum call rate to be included in sample set")
 		parser.add_argument('--snp_callrate', default=0.97, type=float, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
 		parser.add_argument('--clusterSep', default=0.30, type=float, help='[default:0.30] mimimum allowable cluster separation value in order for SNP to be retained (anything equal to or below this value is removed')
@@ -218,16 +218,7 @@ class Pipeline(BasePipeline):
 		
 		# write bulk analysis and statistics data to this file
 		pdf = FPDF()
-		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
-		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
-		# no actual removal happens here, just list removal and records statistics in PDF
-		sample_qc_table, remove_samples_text, reason_samples_fail, sample_fail_locations, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
-		snps_to_remove, reasons_snps_fail = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
-					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
-					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'], outDir=outdir)
-
-
 		# initiate PLINK software
 		plink_general = Software('plink', pipeline_config['plink']['path'])
 
@@ -240,6 +231,18 @@ class Pipeline(BasePipeline):
 		self.separate_sexes(
 			plinkFam=pipeline_args['inputPLINK'][:-4]+'.fam', outDir=outdir
 			)
+
+
+		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
+		# Illumina Threshold Filters, generate stats and create list of samples/snps to remove
+		# no actual removal happens here, just list removal and records statistics in PDF
+		sample_qc_table, remove_samples_text, reason_samples_fail, sample_fail_locations, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], fam=pipeline_args['inputPLINK'][:-4]+'.fam', pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
+		
+		snps_to_remove, reasons_snps_fail = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
+					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
+					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'], outDir=outdir)
+
+
 
 
 	# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
@@ -291,17 +294,12 @@ class Pipeline(BasePipeline):
 
 			extract_lines = subprocess.Popen(['tail', '-4', str(refIdFile)+'_concordance_dup.log'], stdout=subprocess.PIPE)
 			get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
-			print get_concordance
 
 			# regex to sift through the concorance lines from above
 			overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
 			nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
 			concordant = re.search('([0-9]*)\sconcordant', get_concordance)
 			concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(\.[0-9]*|[0-9]*)', get_concordance)
-			print overlaps.group(0)
-			print nonmissing.group(0)
-			print concordant.group(0)
-			print concordant_rate.group(0)
 			outputDict[str(refIdFile_trunc)].extend([overlaps.group(1), nonmissing.group(1), concordant.group(1), concordant_rate.group(1)])
 
 
@@ -311,10 +309,14 @@ class Pipeline(BasePipeline):
 			cleanup.append(str(refIdFile)+'.bed')
 			cleanup.append(str(refIdFile)+'.bim')
 			cleanup.append(str(refIdFile)+'.fam')
+			cleanup.append(str(dupIdFile)+'.log')
 			cleanup.append(str(dupIdFile))
 			cleanup.append(str(dupIdFile)+'.bed')
 			cleanup.append(str(dupIdFile)+'.bim')
 			cleanup.append(str(dupIdFile)+'.fam')
+			cleanup.append(str(dupIdFile)+'.log')
+			cleanup.append(str(refIdFile)+'_concordance_dup.diff')
+			cleanup.append(str(refIdFile)+'_concordance_dup.log')
 			
 			for files in cleanup:
 				subprocess.call(['rm', '-rf', files])
@@ -359,22 +361,23 @@ class Pipeline(BasePipeline):
 			known_pos.write(str(value) + '\t' + str(key) +'\n')
 			known_pos.flush()
 			
+			# WOULD BE USEFUL HERE IF USER GIVES LIST OF DUPLICATE LOCATIONS (smaller search space)
 			batch, well, sampleID = key.split('_')
 			for iid in list(fam_file['IID']):
 				batch2, well2, sampleID2 = iid.split('_')
-				if sampleID == sampleID2:
-				#if sampleID == sampleID2 and well != well2:
+				if sampleID == sampleID2 and well != well2:
 					unknown_pos = open(outdir + '/unknown_pos_'+str(iid), 'w')
 					fid = list(fam_file[fam_file['IID'] == iid]['FID'])
 					unknown_pos.write(str(fid[0]) + '\t' + str(iid) + '\n')
 					unknown_pos.flush()
+					continue;
 
 					
 					concordance_output = check_concordance(outDir=outdir, plinkFile=pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC', 
 								refIdFile=known_pos.name, dupIdFile=unknown_pos.name, outputDict=concordance_output)
 
 		#----------------------------------------------------------------------------------------------------------
-		'''
+	
 		# trio concordance check
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only'),
@@ -399,11 +402,11 @@ class Pipeline(BasePipeline):
 
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_trios_only*')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only*')
-		'''
+
 
 		
 
-		'''
+
 		########## make plink files for missingness RECALCULATED POST-ILLUMINA SNP QC ###########
 		
 		# all samples autosomal only
@@ -743,4 +746,3 @@ class Pipeline(BasePipeline):
 			subprocess.call(['rm', '-rf', files])
 
 		self.check_sum(outdir=pipeline_args['outDir'], projectName=pipeline_args['projectName'])
-		'''
