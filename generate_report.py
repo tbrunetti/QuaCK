@@ -173,7 +173,7 @@ def thresholds_and_parameters(pdf, params):
 			pdf.multi_cell(0, 8, str(key)+':     '+str(params[key]), 0, 1, 'L')
 
 
-def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
+def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 	print "Running Illumina Sample QC..."
 	
@@ -213,9 +213,10 @@ def illumina_sample_overview(inputFile, pdf, callrate, outDir, cleanup):
 	# store batch and chip number of sample that fails missingness threshold
 	chips_fail_missingness_check = {}
 
+	famfile = pandas.read_table(fam, delim_whitespace=True, names=['FID', 'IID', 'PAT', 'MAT', 'SEX', 'AFF'])
 	reason_samples_fail = open(outDir + '/' + 'samples_failing_QC_details.txt', 'w')
 	# create a files called "samples_to_remove.txt" to be passed in proper format to plink for sample removal
-	temp_remove = {x:list(sample_qc_table.loc[sample_qc_table['Sample ID'] == x]['FID']) for x in samples_to_remove}
+	temp_remove = {x:list(famfile.loc[famfile['IID'] == x]['FID']) for x in samples_to_remove}
 	for key in temp_remove:
 		samples_to_remove_text.write(str(temp_remove[key][0]) + '\t' + str(key) + '\n')
 		reason_samples_fail.write(str(temp_remove[key][0]) + '\t' + str(key) + '\t' + str('failed Illumina Sample Missingness: ') + str(list(sample_qc_table[sample_qc_table['Sample ID'] == key]['Call Rate'])[0]) + '\n')
