@@ -38,7 +38,6 @@ There are a total of three files that the user must provide to the pipeline.
 3.  PLINK file (PED with MAP, or BED with BIM & FAM)  
 
 All three files can easily be generated using Illumina's free GenomeStudio software (https://www.illumina.com/techniques/microarrays/array-data-analysis-experimental-design/genomestudio.html).  However, GenomeStudio only has Windows support, therefore, unless your OS is Windows, one can create a Windows Virtual machine and run GenomeStudio there and export the results. The other option is to manually create these files using other software or by generating a tab-delimited Sample and SNP table.  The required tab-delimited headers for the sample table need to be the following (in any order):
-* FID
 * Sample ID
 * Call Rate
 * p10 GC   
