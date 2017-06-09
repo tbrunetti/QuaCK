@@ -8,7 +8,7 @@ class Pipeline(BasePipeline):
 	
 	def dependencies(self):
 		# assuming user as pip installed
-		return ['pandas', 'matplotlib', 'fpdf', 'Pillow', 'seaborn', 'pypdf2']
+		return ['pandas', 'matplotlib', 'fpdf', 'Pillow', 'seaborn', 'statistics', 'pypdf2']
 
 	def description(self):
 		return 'Pipeline to perform sample QC (call rate, HWE, Mendelian Error)'
@@ -18,6 +18,9 @@ class Pipeline(BasePipeline):
 		return {
 			'plink':{
 				'path': 'Full path to PLINK executable (must be version >=1.9):'
+			},
+			'thousand_genomes':{
+				'path': 'Full path to 1000 genomes PLINK data ending in .bed for HapMap Trio concordance check:'
 			}
 		}
 
@@ -42,6 +45,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--maxFemale', default=0.20, type=float, help='[default:0.20] F scores below this value will be imputed as female subjects based on X-chromosome imputation')
 		parser.add_argument('--minMale', default=0.80, type=float, help='[default:0.80] F scores above this value will be imputed as male subjects based on X-chromosome imputation')
 		parser.add_argument('--chipFailure', default=1, type=int, help='[default:1] Maximum number of sex discrepencies or missigness threshold fails a chip can have before considered failing')
+
 
 	@staticmethod
 	def check_input_format(inputPlinkfile, plink):
@@ -219,8 +223,10 @@ class Pipeline(BasePipeline):
 		# write bulk analysis and statistics data to this file
 		pdf = FPDF()
 		
+		# Software initializations
 		# initiate PLINK software
 		plink_general = Software('plink', pipeline_config['plink']['path'])
+
 
 		# checks file format of PLINK file, if not in binary converts to binary
 		self.check_input_format(
@@ -305,18 +311,9 @@ class Pipeline(BasePipeline):
 
 			print outputDict
 
-			cleanup.append(str(refIdFile))
-			cleanup.append(str(refIdFile)+'.bed')
-			cleanup.append(str(refIdFile)+'.bim')
-			cleanup.append(str(refIdFile)+'.fam')
-			cleanup.append(str(dupIdFile)+'.log')
-			cleanup.append(str(dupIdFile))
-			cleanup.append(str(dupIdFile)+'.bed')
-			cleanup.append(str(dupIdFile)+'.bim')
-			cleanup.append(str(dupIdFile)+'.fam')
-			cleanup.append(str(dupIdFile)+'.log')
-			cleanup.append(str(refIdFile)+'_concordance_dup.diff')
-			cleanup.append(str(refIdFile)+'_concordance_dup.log')
+			cleanup.extend([str(refIdFile), str(refIdFile)+'.bed', str(refIdFile)+'.bim', str(refIdFile)+'.fam', str(refIdFile)+'.log'])
+			cleanup.extend([str(dupIdFile), str(dupIdFile)+'.bed', str(dupIdFile)+'.bim', str(dupIdFile)+'.fam', str(dupIdFile)+'.log'])
+			cleanup.extend([str(refIdFile)+'_concordance_dup.diff', str(refIdFile)+'_concordance_dup.log'])
 			
 			for files in cleanup:
 				subprocess.call(['rm', '-rf', files])
@@ -324,11 +321,81 @@ class Pipeline(BasePipeline):
 			return outputDict
 
 
-		# get FID, IID of dupicate trio locations:
+		# ----------------------------------------- TRIO CHECKS ----------------------------------------------------
+		# get FID, IID of trio locations:
 		get_trios = open(outdir + '/get_trios.txt', 'w')
+		update_trio_names = open(outdir + '/update_trio_names.txt', 'w')
 		#get_dups = open(outdir + '/check_dups.txt', 'w')
 		iid_dups = {}
 		fam_file = pandas.read_table(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam', delim_whitespace=True, header=None, names=['FID', 'IID', 'PED', 'MAT', 'GEN', 'AFF'])
+		dict_samples = dict(zip(fam_file.FID, fam_file.IID))
+
+		trios = [(fid, iid, iid.split('_')[-1]) for fid, iid in dict_samples.iteritems() if iid.split('_')[-1][0:2] == 'NA']
+		print trios
+		
+		
+		for samples in trios:
+			get_trios.write(str(samples[0]) + '\t' + str(samples[1]) + '\n') # PLINK format to extract samplesi"q
+			update_trio_names.write(str(samples[0]) + '\t' + str(samples[1]) + '\t' + str(samples[2]) + '\t' + str(samples[2]) + '\n') # PLINK format for updating FID/IID
+		
+		get_trios.flush() # push out buffer contents
+		update_trio_names.flush() # push out buffer contents
+
+		
+		# makes bed of HapMap trios
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
+			Parameter('--keep', get_trios.name),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios')
+			)
+		
+		# updates HapMap trio IDs to be concordant with 1000 genomes
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
+			Parameter('--update-ids', update_trio_names.name),
+			Parameter('--make-bed'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated')
+			)
+
+		# trio concordance check
+		# NEED TO EXTRACT JUST TO NA followed by number part of trios and rename FID and IID with the NA ID (ONLY TO CHECK FOR 1000 GENOMES CONCORDANCE)
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated'),
+			Parameter('--bmerge', pipeline_config['thousand_genomes']['path'][:-4]),
+			Parameter('--merge-mode', '7'),
+			Parameter('--out', outdir + '/trio_concordance_1000genomes')
+			)
+
+
+		extract_lines = subprocess.Popen(['tail', '-4', outdir + '/trio_concordance_1000genomes.log'], stdout=subprocess.PIPE)
+		get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
+		# regex to sift through the concorance lines from above
+		overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
+		nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
+		concordant = re.search('([0-9]*)\sconcordant', get_concordance)
+		concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(\.[0-9]*|[0-9]*)', get_concordance)
+		thous_trio_concordace = {'total_overlapping_calls':overlaps.group(1), 'total_nonmissing': nonmissing.group(1), 'total_concordant':concordant.group(1), 'percent_concordance':concordant_rate.group(1)}
+
+
+		# .lmendel is one line per variant [CHR, SNP, N]
+		# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
+		# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
+			Parameter('--mendel'),
+			Parameter('--out', outdir)
+			)
+
+
+		stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_trios_only.bed', pipeline_args['inputPLINK'][:-4]+'_trios_only.bim', 
+							pipeline_args['inputPLINK'][:-4]+'_trios_only.fam'])
+
+		
+
+		# ----------------------------------------- END OF TRIO CHECKS ----------------------------------------------------
+
+		'''
 		for iid in list(fam_file['IID']):
 			print iid
 			if re.search('([A-Z]*[a-z]*[0-9]*)-DNA_(B01|B06|B12).*', iid):
@@ -341,16 +408,8 @@ class Pipeline(BasePipeline):
 			else:
 				continue;
 
-		get_trios.flush()
-		#get_dups.flush()
+		'''
 
-		# plink file of just the trio samples
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
-			Parameter('--keep', os.path.realpath(get_trios.name)),
-			Parameter('--make-bed'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_trios_only')
-			)
 		
 		#------------------------------------------------------------------------------------------------------
 		# check duplicate concordance
@@ -378,30 +437,7 @@ class Pipeline(BasePipeline):
 
 		#----------------------------------------------------------------------------------------------------------
 	
-		# trio concordance check
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only'),
-			Parameter('--bmerge', '<insert name of 1000 genomes here>'),
-			Parameter('--merge-mode', '7'),
-			Parameter('--out', outdir + '/trio_concordance_1000genomes')
-			)
-
-		# .lmendel is one line per variant [CHR, SNP, N]
-		# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
-		# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_trios_only'),
-			Parameter('--mendel')
-			)
-
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only'),
-			Parameter('--genome', 'full'),
-			Parameter('--out', outdir+'/dup_concordance_check')
-			)
-
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_trios_only*')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_dup_concordance_only*')
+		
 
 
 		
@@ -528,31 +564,17 @@ class Pipeline(BasePipeline):
 			)
 
 		# tags these files for removal when the pipeline finishes running
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.bed')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.bim')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.fam')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.imiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_autosomes.lmiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.bed')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.bim')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.fam')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.lmiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.imiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bed')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bim')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.fam')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.bed')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.bim')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.fam')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.lmiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.imiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.lmiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.imiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bed')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bim')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.fam')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.imiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.lmiss')
+		stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_autosomes.bed', pipeline_args['inputPLINK'][:-4]+'_autosomes.bim', pipeline_args['inputPLINK'][:-4]+'_autosomes.fam', 
+			pipeline_args['inputPLINK'][:-4]+'_autosomes.imiss', pipeline_args['inputPLINK'][:-4]+'_autosomes.lmiss'])
+		stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.bed', pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.bim', pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.fam', 
+			pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.imiss', pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females.lmiss'])
+		stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bed', pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.bim', pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.fam', 
+			pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.imiss', pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only.lmiss'])
+		stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.bed', pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.bim', pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.fam', pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.imiss', 
+			pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed.lmiss'])
+		stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bed', pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.bim', pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.fam', 
+			pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.imiss', pipeline_args['inputPLINK'][:-4]+'_unknown_chr_snps.lmiss'])
+
 
 		# remove all SNPs from file not passing Illumina QC and not passing call rate QC
 		unique_snps_to_remove = set(snps_to_remove)
@@ -664,7 +686,7 @@ class Pipeline(BasePipeline):
 
 
 		pdf_summary_page = FPDF()
-		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC')
+		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=thous_trio_concordace)
 
 		pdf_title.output(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf', 'F')
 		pdf.output(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf', 'F')
@@ -744,5 +766,13 @@ class Pipeline(BasePipeline):
 		print '\n\n' + "Cleaning up project directory"
 		for files in stage_for_deletion:
 			subprocess.call(['rm', '-rf', files])
+
+		# creates a cleaned VCF in addition to the cleaned PLINK file
+		plink_general.run(
+			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_QC'),
+			Parameter('--recode', 'vcf-iid'),
+			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_QC')
+			)
+	
 
 		self.check_sum(outdir=pipeline_args['outDir'], projectName=pipeline_args['projectName'])
