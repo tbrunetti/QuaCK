@@ -12,7 +12,7 @@ import warnings
 
 # this method will be called last so everything can be calculated
 # then rearrange pages in PDF so this become page 2
-def overall_main_page_stats(pdf, originalFile, cleanedFile):
+def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance):
 	num_samples_analyzed = sum(1 for line in open(originalFile+'.fam'))
 	num_samples_qc_pass = sum(1 for line in open(cleanedFile+'.fam'))
 	num_snps_analyzed = sum(1 for line in open(originalFile+'.bim'))
