@@ -97,8 +97,9 @@ The last thing to do is to install the pipeline now that the configuration file 
 ```
 chunky install run_GWAS_QC_filtering_pipeline.py
 ```
-This will ask the user the following question:
+If the pipeline was installed successfully the following message will appear:
 ```
+Pipeline run_GWAS_QC_filtering_pipeline.py sucessfully installed.
 ```
 If the pipeline has been previously installed it will ask the user if they would like to overwrite the existing pipeline.  This will only ever be required if changes have been made to the code.
 ```
