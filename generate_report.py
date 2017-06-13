@@ -12,7 +12,7 @@ import warnings
 
 # this method will be called last so everything can be calculated
 # then rearrange pages in PDF so this become page 2
-def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance):
+def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon):
 	num_samples_analyzed = sum(1 for line in open(originalFile+'.fam'))
 	num_samples_qc_pass = sum(1 for line in open(cleanedFile+'.fam'))
 	num_snps_analyzed = sum(1 for line in open(originalFile+'.bim'))
@@ -37,26 +37,32 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance):
 	pdf.multi_cell(0, 8, "Sample Summary", 1, 'L', True)
 	pdf.set_x(30)
 	pdf.set_font('Arial', '', 16)
-	pdf.multi_cell(0, 8, "Total Samples analyzed:  "+str(num_samples_analyzed), 1, '1', 'L')
+	pdf.multi_cell(0, 8, "Total samples analyzed:  "+str(num_samples_analyzed), 1, '1', 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Total Samples Passing QC:  "+str(num_samples_qc_pass), 1, 1, 'L')
-	pdf.multi_cell(0, 8, "\n\n\n\n\n", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total samples Passing QC:  "+str(num_samples_qc_pass), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "\n\n", 0, 1, 'L')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.multi_cell(0, 8, "SNP Summary", 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Total SNPs analyzed:  "+str(num_snps_analyzed), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Total SNPs Passing QC:  "+str(num_snps_qc_pass), 1, 1, 'L')
-	pdf.multi_cell(0, 8, "\n\n\n\n\n", 0, 1, 'L')
+	pdf.multi_cell(0, 8, "Total SNPs passing QC:  "+str(num_snps_qc_pass), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "\n\n", 0, 1, 'L')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.multi_cell(0, 8, "Data Summary", 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
 	# this is the total number of snps released samples x snps
-	pdf.multi_cell(0, 8, "Total Genotypes Passing QC: ", 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Total genotypes passing QC: "+str(int(num_samples_qc_pass) * int(num_snps_qc_pass)), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Percent Missing Data: ", 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Percent missing data: ", 1, 1, 'L')
+	pdf.set_x(30)
+	pdf.multi_cell(0, 8, "Percent HapMap trio concordance with 1000 Genomes: " +str(concordance['percent_concordance'])+'%', 1, 1, 'L')
+	pdf.set_x(30)
+	pdf.multi_cell(0, 8, "Percent duplicate concordance: "+str(dupCon['percent_concordance'])+'%', 1, 1, 'L')
+
+
 
 def explanation_of_deliverables(pdf, params):
 	pdf.add_page()
