@@ -21,6 +21,9 @@ class Pipeline(BasePipeline):
 			},
 			'thousand_genomes':{
 				'path': 'Full path to 1000 genomes PLINK data ending in .bed for HapMap Trio concordance check:'
+			},
+			'hapmap_info':{
+				'path': 'Full path to tab delimited file containing HapMap FID information (should have 4 headers: IID, SEX, FID, REL):'
 			}
 		}
 
@@ -28,6 +31,8 @@ class Pipeline(BasePipeline):
 		parser.add_argument('-sampleTable', required=True, type=str, help="[REQUIRED] Full path to text file of Illumina sample table metrics tab-delimited")
 		parser.add_argument('-snpTable', required=True, type=str, help="[REQUIRED] Full path to text file of Illumina SNP table tab-delimited")
 		parser.add_argument('-inputPLINK', required=True, type=str, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
+		parser.add_argument('--finalReport', default=None, type=str, help='[default:None] Comma separated list. Ex. Full path to tab-delimited genome studio final report with Log R Ratio and B allele frequency column,line header begins on with starting index at 0, line0 = line1, line1=line2, etc... \
+																			if header columns begin on the 5th line, the parameter input should be the following: /path/to/file,4 ')
 		parser.add_argument('--arrayType', default='Illumina MEGA', type=str, help='Name of array or chip used for SNPs')
 		parser.add_argument('--outDir', default=os.getcwd(), type=str, help='[default:current working directory] Full path to output directory, (note a new directory is made in this directory')
 		parser.add_argument('--projectName', default=str(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")), type=str, help="Name of project or owner of project")
@@ -111,7 +116,7 @@ class Pipeline(BasePipeline):
 		total_samples = len(list(samples['IID']))
 		total_snps = len(list(missingness_snp['SNP']))
 		snp_fails_dataframe = missingness_snp[missingness_snp['F_MISS'] > (1-callrate)]
-		snp_fails_dataframe['F_MISS'] = 'failed '+ str(chrm) + ' SNP call rate threshold: ' + snp_fails_dataframe['F_MISS'].astype(str)
+		snp_fails_dataframe['F_MISS'] = 'failed '+ str(chrm) + ' SNP call rate threshold ratio of missing: ' + snp_fails_dataframe['F_MISS'].astype(str)
 		snp_fails_dict = snp_fails_dataframe.set_index('SNP')['F_MISS'].to_dict()
 		# to make easy to merge with existing dictionary without overwriting values
 		snp_fails_dict_appendable = {key:[value] for key, value in snp_fails_dict.iteritems()}
@@ -162,6 +167,8 @@ class Pipeline(BasePipeline):
 		
 		pdf.multi_cell(0, 8, '\n', 0, 1, 'L')
 
+		del missingness_snp
+		del samples
 		return snps_to_remove, remove_reasons
 
 	@staticmethod
@@ -195,7 +202,7 @@ class Pipeline(BasePipeline):
 			print "Making new directory called "+str(pipeline_args['projectName']) + ' located in ' + str(pipeline_args['outDir'])
 			outdir = pipeline_args['outDir']+'/'+pipeline_args['projectName']
 			os.mkdir(outdir)
-
+		'''
 		# create PDF object for output
 		pdf_title = FPDF()
 		pdf_title.add_page()
@@ -274,174 +281,187 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(outdir+'/snps_to_remove_illumina.txt')
 
 
-		######## now perform trio and duplication concordance here #########
-		#place here so plink can be placed within scope of .run and Software calls made my pipeline
-		def check_concordance(outDir, plinkFile, refIdFile, dupIdFile, outputDict):
-			cleanup = []
-			refIdFile_trunc = refIdFile.split('/')[-1] # shorten names so not to save full path
-			dupIdFile_trunc = dupIdFile.split('/')[-1]
-			outputDict[str(refIdFile_trunc)] = [str(dupIdFile_trunc)] # key=known postion of iid, value is list [0]=unknown dup with iid
+		# ----------------------------------------- BEGIN TRIO CHECKS ----------------------------------------------------
+		# fam_file and dict_samples are used in both trio and duplication concordance checks
 
-			for x in [refIdFile, dupIdFile]:
-				plink_general.run(
-					Parameter('--bfile', str(plinkFile)),
-					Parameter('--keep', str(x)),
-					Parameter('--make-bed'),
-					Parameter('--out', str(x))
-					)
+		fam_file = pandas.read_table(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam', delim_whitespace=True, header=None, names=['FID', 'IID', 'PED', 'MAT', 'GEN', 'AFF'])
+		dict_samples = dict(zip(fam_file.FID, fam_file.IID))
 
+		# get FID, IID of trio locations:
+		get_trios = open(outdir + '/get_trios.txt', 'w')
+		update_trio_names = open(outdir + '/update_trio_names.txt', 'w')
+		
+		trios = [(fid, iid, iid.split('_')[-1]) for fid, iid in dict_samples.iteritems() if iid.split('_')[-1][0:2] == 'NA']
+		
+		
+		if len(trios) > 0:
+			
+			trio_ids_only = {x[2]:[x[0], x[1]] for x in trios} # will be useful for calculating Mendel errors
 
+			for samples in trios:
+				get_trios.write(str(samples[0]) + '\t' + str(samples[1]) + '\n') # PLINK format to extract samplesi"q
+				update_trio_names.write(str(samples[0]) + '\t' + str(samples[1]) + '\t' + str(samples[2]) + '\t' + str(samples[2]) + '\n') # PLINK format for updating FID/IID
+			
+			get_trios.flush() # push out buffer contents
+			update_trio_names.flush() # push out buffer contents
+
+			
+			# makes bed of HapMap trios
 			plink_general.run(
-				Parameter('--bfile', str(refIdFile)),
-				Parameter('--bmerge', str(dupIdFile)),
-				Parameter('--merge-mode', '6'), # all mismatching calls including missing calls
-				Parameter('--out', str(refIdFile)+'_concordance_dup')
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
+				Parameter('--keep', get_trios.name),
+				Parameter('--make-bed'),
+				Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios')
+				)
+			
+			# updates HapMap trio IDs to be concordant with 1000 genomes
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
+				Parameter('--update-ids', update_trio_names.name),
+				Parameter('--make-bed'),
+				Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated')
 				)
 
-			extract_lines = subprocess.Popen(['tail', '-4', str(refIdFile)+'_concordance_dup.log'], stdout=subprocess.PIPE)
-			get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
+			# trio concordance check
+			# Need to extract just NA followed by number part of trios and rename FID and IID with the NA ID (ONLY TO CHECK FOR 1000 GENOMES CONCORDANCE)
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated'),
+				Parameter('--bmerge', pipeline_config['thousand_genomes']['path'][:-4]),
+				Parameter('--merge-mode', '7'),
+				Parameter('--out', outdir + '/trio_concordance_1000genomes')
+				)
 
+
+			extract_lines = subprocess.Popen(['tail', '-4', outdir + '/trio_concordance_1000genomes.log'], stdout=subprocess.PIPE)
+			get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
+			# regex to sift through the concorance lines from above
+			overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
+			nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
+			concordant = re.search('([0-9]*)\sconcordant', get_concordance)
+			concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
+			# this dictionary is eventually passed to a call in generate_report.py (def overall_main_page_stats)
+			thous_trio_concordace = {'total_overlapping_calls':overlaps.group(1), 'total_nonmissing': nonmissing.group(1), 'total_concordant':concordant.group(1), 'percent_concordance':str("%.2f" % round(float(concordant_rate.group(1))*100, 2))}
+			print concordant_rate.group(1)
+
+			hapmap_info_sheet = pandas.read_table(pipeline_config['hapmap_info']['path'], header=0)
+			trios_info = hapmap_info_sheet.loc[hapmap_info_sheet['IID'].isin([key for key in trio_ids_only])]
+			dict_trio_fids =  dict(zip(trios_info.IID, trios_info.FID))
+			rename_mendel = open(outdir + '/mendel_renamed_families.txt', 'w')
+			for key, value in dict_trio_fids.iteritems():
+				rename_mendel.write(str(trio_ids_only[key][0]) + '\t' + str(trio_ids_only[key][1]) + '\t' + str(value) + '\t' + str(key) + '\n')
+
+			rename_mendel.flush()
+			del hapmap_info_sheet
+			del trios_info
+
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
+				Parameter('--update-ids', rename_mendel.name),
+				Parameter('--make-bed'),
+				Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families')
+				)
+
+
+			# .lmendel is one line per variant [CHR, SNP, N]
+			# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
+			# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families'),
+				Parameter('--mendel'),
+				Parameter('--out', outdir + '/mendel_errors')
+				)
+
+
+			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.bed', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.bim', 
+								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bed',
+								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bim', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.log',
+								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.nosex', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.log',
+								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.nosex'])
+
+		else:
+			# NO TRIOS IN DATASET
+			thous_trio_concordace = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str("%.2f" % round(int(0)*100, 2))}	
+
+		# ----------------------------------------- END OF TRIO CHECKS ----------------------------------------------------
+
+
+
+		# ----------------------------------------- BEGIN DUPLICATION CHECKS ----------------------------------------------------
+		all_samples = {}
+		for fid, iid in dict_samples.iteritems():
+			all_samples.setdefault(iid.split('_')[-1], []).extend([fid, iid]) 
+
+		# each item in list contains [fid1, iid1, fid2, iid2] where 1 is the duplicate pair of 2
+		duplicate_pairs = [value for key, value in all_samples.iteritems() if len(value) > 2] # only extracts duplicates
+		
+		if len(duplicate_pairs) > 0: # confirms there are duplicates in the data set
+			
+			extract_dups_1 = open(outdir + '/duplicates1.txt', 'w') # format is FID IID, this will be file to input into PLINK to extact duplicates
+			extract_dups_2 = open(outdir + '/duplicates2.txt', 'w') # format is FID IID, this will be file to input into PLINK to extact duplicates
+			change_names = open(outdir + '/duplicate_name_updates.txt', 'w') # change names to match, required in order to get concordance calc
+			
+			for samples in duplicate_pairs:
+				extract_dups_1.write(str(samples[0]) + '\t' + str(samples[1]) + '\n') # input format for PLINK
+				extract_dups_2.write(str(samples[2]) + '\t' + str(samples[3]) + '\n') # input format for PLINK
+				change_names.write(str(samples[2]) + '\t' + str(samples[3]) + '\t' + str(samples[0]) + '\t' + str(samples[1]) + '\n') # change extract_dups_2 ids, to  match dup1
+			
+			extract_dups_1.flush()
+			extract_dups_2.flush()
+			change_names.flush()
+
+			# make plink subset of duplicate 1 samples only
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
+				Parameter('--keep', extract_dups_1.name),
+				Parameter('--make-bed'),
+				Parameter('--out', pipeline_args['inputPLINK'][:-4] + '_dup1')
+				)
+			
+			# make plink subset of duplicate 2 samples only
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
+				Parameter('--keep', extract_dups_2.name),
+				Parameter('--make-bed'),
+				Parameter('--out', pipeline_args['inputPLINK'][:-4] + '_dup2')
+				)
+
+			# change names of duplicate 2 to match duplicate 1
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4] + '_dup2'),
+				Parameter('--update-ids', change_names.name),
+				Parameter('--make-bed'),
+				Parameter('--out', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated')
+				)
+
+			# perform concordance checks
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated'),
+				Parameter('--bmerge', pipeline_args['inputPLINK'][:-4] + '_dup1'),
+				Parameter('--merge-mode', '7'),
+				Parameter('--out', outdir + '/duplicate_concordance')
+				)
+
+
+			extract_lines = subprocess.Popen(['tail', '-4', outdir + '/duplicate_concordance.log'], stdout=subprocess.PIPE)
+			get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
 			# regex to sift through the concorance lines from above
 			overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
 			nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
 			concordant = re.search('([0-9]*)\sconcordant', get_concordance)
 			concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(\.[0-9]*|[0-9]*)', get_concordance)
-			outputDict[str(refIdFile_trunc)].extend([overlaps.group(1), nonmissing.group(1), concordant.group(1), concordant_rate.group(1)])
+			# this dictionary is eventually passed to a call in generate_report.py (def overall_main_page_stats)
+			duplicate_concordance = {'total_overlapping_calls':overlaps.group(1), 'total_nonmissing': nonmissing.group(1), 'total_concordant':concordant.group(1), 'percent_concordance':str("%.2f" % round(float(concordant_rate.group(1))*100, 2))}
 
 
-			print outputDict
-
-			cleanup.extend([str(refIdFile), str(refIdFile)+'.bed', str(refIdFile)+'.bim', str(refIdFile)+'.fam', str(refIdFile)+'.log'])
-			cleanup.extend([str(dupIdFile), str(dupIdFile)+'.bed', str(dupIdFile)+'.bim', str(dupIdFile)+'.fam', str(dupIdFile)+'.log'])
-			cleanup.extend([str(refIdFile)+'_concordance_dup.diff', str(refIdFile)+'_concordance_dup.log'])
-			
-			for files in cleanup:
-				subprocess.call(['rm', '-rf', files])
-
-			return outputDict
-
-
-		# ----------------------------------------- TRIO CHECKS ----------------------------------------------------
-		# get FID, IID of trio locations:
-		get_trios = open(outdir + '/get_trios.txt', 'w')
-		update_trio_names = open(outdir + '/update_trio_names.txt', 'w')
-		#get_dups = open(outdir + '/check_dups.txt', 'w')
-		iid_dups = {}
-		fam_file = pandas.read_table(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam', delim_whitespace=True, header=None, names=['FID', 'IID', 'PED', 'MAT', 'GEN', 'AFF'])
-		dict_samples = dict(zip(fam_file.FID, fam_file.IID))
-
-		trios = [(fid, iid, iid.split('_')[-1]) for fid, iid in dict_samples.iteritems() if iid.split('_')[-1][0:2] == 'NA']
-		print trios
+			stage_for_deletion.extend([])
 		
-		
-		for samples in trios:
-			get_trios.write(str(samples[0]) + '\t' + str(samples[1]) + '\n') # PLINK format to extract samplesi"q
-			update_trio_names.write(str(samples[0]) + '\t' + str(samples[1]) + '\t' + str(samples[2]) + '\t' + str(samples[2]) + '\n') # PLINK format for updating FID/IID
-		
-		get_trios.flush() # push out buffer contents
-		update_trio_names.flush() # push out buffer contents
-
-		
-		# makes bed of HapMap trios
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
-			Parameter('--keep', get_trios.name),
-			Parameter('--make-bed'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios')
-			)
-		
-		# updates HapMap trio IDs to be concordant with 1000 genomes
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
-			Parameter('--update-ids', update_trio_names.name),
-			Parameter('--make-bed'),
-			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated')
-			)
-
-		# trio concordance check
-		# NEED TO EXTRACT JUST TO NA followed by number part of trios and rename FID and IID with the NA ID (ONLY TO CHECK FOR 1000 GENOMES CONCORDANCE)
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated'),
-			Parameter('--bmerge', pipeline_config['thousand_genomes']['path'][:-4]),
-			Parameter('--merge-mode', '7'),
-			Parameter('--out', outdir + '/trio_concordance_1000genomes')
-			)
+		else: # there are no duplicates in the data set
+			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str("%.2f" % round(int(0)*100, 2))}	
 
 
-		extract_lines = subprocess.Popen(['tail', '-4', outdir + '/trio_concordance_1000genomes.log'], stdout=subprocess.PIPE)
-		get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
-		# regex to sift through the concorance lines from above
-		overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
-		nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
-		concordant = re.search('([0-9]*)\sconcordant', get_concordance)
-		concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(\.[0-9]*|[0-9]*)', get_concordance)
-		thous_trio_concordace = {'total_overlapping_calls':overlaps.group(1), 'total_nonmissing': nonmissing.group(1), 'total_concordant':concordant.group(1), 'percent_concordance':concordant_rate.group(1)}
+		# ----------------------------------------- END OF DUPLICATION CHECKS ----------------------------------------------------
 
-
-		# .lmendel is one line per variant [CHR, SNP, N]
-		# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
-		# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
-		plink_general.run(
-			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
-			Parameter('--mendel'),
-			Parameter('--out', outdir)
-			)
-
-
-		stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_trios_only.bed', pipeline_args['inputPLINK'][:-4]+'_trios_only.bim', 
-							pipeline_args['inputPLINK'][:-4]+'_trios_only.fam'])
-
-		
-
-		# ----------------------------------------- END OF TRIO CHECKS ----------------------------------------------------
-
-		'''
-		for iid in list(fam_file['IID']):
-			print iid
-			if re.search('([A-Z]*[a-z]*[0-9]*)-DNA_(B01|B06|B12).*', iid):
-				fid = list(fam_file[fam_file['IID'] == iid]['FID'])
-				get_trios.write(str(fid[0]) + ' ' + str(iid) + '\n')
-			elif re.search('([A-Z]*[a-z]*[0-9]*)-DNA_(A01|A06|A12).*', iid):
-				fid = list(fam_file[fam_file['IID'] == iid]['FID'])
-				iid_dups[iid] = fid[0]
-				#get_dups.write(str(fid[0]) + ' ' + str(iid) + '\n')
-			else:
-				continue;
-
-		'''
-
-		
-		#------------------------------------------------------------------------------------------------------
-		# check duplicate concordance
-		concordance_output = {}
-		for key, value in iid_dups.iteritems():
-			batch, well, sampleID = key.split('_')
-			known_pos = open(outdir + '/known_pos_'+str(key), 'w')
-			known_pos.write(str(value) + '\t' + str(key) +'\n')
-			known_pos.flush()
-			
-			# WOULD BE USEFUL HERE IF USER GIVES LIST OF DUPLICATE LOCATIONS (smaller search space)
-			batch, well, sampleID = key.split('_')
-			for iid in list(fam_file['IID']):
-				batch2, well2, sampleID2 = iid.split('_')
-				if sampleID == sampleID2 and well != well2:
-					unknown_pos = open(outdir + '/unknown_pos_'+str(iid), 'w')
-					fid = list(fam_file[fam_file['IID'] == iid]['FID'])
-					unknown_pos.write(str(fid[0]) + '\t' + str(iid) + '\n')
-					unknown_pos.flush()
-					continue;
-
-					
-					concordance_output = check_concordance(outDir=outdir, plinkFile=pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC', 
-								refIdFile=known_pos.name, dupIdFile=unknown_pos.name, outputDict=concordance_output)
-
-		#----------------------------------------------------------------------------------------------------------
 	
-		
-
-
-		
-
 
 		########## make plink files for missingness RECALCULATED POST-ILLUMINA SNP QC ###########
 		
@@ -686,7 +706,7 @@ class Pipeline(BasePipeline):
 
 
 		pdf_summary_page = FPDF()
-		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=thous_trio_concordace)
+		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=thous_trio_concordace, dupCon=duplicate_concordance)
 
 		pdf_title.output(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf', 'F')
 		pdf.output(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf', 'F')
@@ -766,7 +786,63 @@ class Pipeline(BasePipeline):
 		print '\n\n' + "Cleaning up project directory"
 		for files in stage_for_deletion:
 			subprocess.call(['rm', '-rf', files])
+		
+		'''
+		
+		
+		if pipeline_args['finalReport'] != None:
+			final_report_stats = open(outdir + '/final_report_statistics_per_sample.txt', 'w')
+			final_report_stats.write('\t'.join(['Sample_ID', 'median_LLR', 'mean_LRR', 'std_LRR', 'median_BAF', 'mean_BAF', 'std_BAF', 'max_LLR', 'min_LLR', 'max_BAF', 'min_BAF']) + '\n')
+			samples = {}
+			path, header = pipeline_args['finalReport'].split(',')
+			with open(path, 'r') as test:
+				f = open(outdir + '/header_stuff.txt', 'w')
+				for _ in xrange(9):
+					f.write(next(test))
+				true_header = next(test)
+				for line in test:
+					if outdir + '/' + str(line.rstrip().split('\t')[-1]) + '.txt' in samples:
+						f.write(line + '\n')
+					else:
+						f.close()
+						f = open(outdir + '/' + str(line.rstrip().split('\t')[-1]) + '.txt', 'w')
+						f.write(true_header)
+						samples[f.name] = 1
+				f.close()
 
+			for key in samples:
+				sample_subset = pandas.read_table(key)
+				final_report_stats.write(str(key.split('/')[-1][:-4]) + '\t' + str(sample_subset['Log R Ratio'].median()) + '\t' + str(sample_subset['Log R Ratio'].mean()) +'\t' +
+					str(sample_subset['Log R Ratio'].std()) + '\t' + str(sample_subset['B Allele Freq'].median()) + '\t' + str(sample_subset['B Allele Freq'].mean()) + '\t' +
+					str(sample_subset['B Allele Freq'].std()) + '\t' + str(sample_subset['Log R Ratio'].max()) +'\t' + str(sample_subset['Log R Ratio'].min()) + '\t' +
+					str(sample_subset['B Allele Freq'].max()) + '\t' + str(sample_subset['B Allele Freq'].min()) +'\n')
+				del sample_subset
+			final_report_stats.close()	
+
+
+			'''
+			final_report_stats = open(outdir + '/final_report_statistics_per_sample.txt', 'w')
+			final_report_stats.write('\t'.join(['Sample_ID', 'median_LLR', 'mean_LRR', 'std_LRR', 'median_BAF', 'mean_BAF', 'std_BAF', 'max_LLR', 'min_LLR', 'max_BAF', 'min_BAF']) + '\n')
+			path, header = pipeline_args['finalReport'].split(',')
+			
+			#failing_snps = pandas.read_table(snps_failing_QC_details.name, usecols=[0], names=['snps'])
+			#print "shape_fail "+ str(failing_snps.shape)
+			final_table_full = pandas.read_table(path, header=[int(header)])
+			print "shape_full "+ str(final_table_full.shape)
+			#table_cleaned = final_table_full.loc[~final_table_full['SNP Name'].isin(list(failing_snps['snps']))]
+			#print "shape_table_cleaned "+ str(table_cleaned.shape)
+			all_samples = list(final_table_full['Sample ID'])
+			del final_table_full
+			del failing_snps
+			for sample in all_samples:
+				sample_subset = final_table_full.loc[final_table_full['Sample ID'] == sample]
+				final_report_stats.write(str(sample) + '\t' + str(sample_subset['Log R Ratio'].median()) + '\t' + str(sample_subset['Log R Ratio'].mean()) +'\t' +
+					str(sample_subset['Log R Ratio'].std()) + '\t' + str(sample_subset['B Allele Freq'].median()) + '\t' + str(sample_subset['B Allele Freq'].mean()) + '\t' +
+					str(sample_subset['B Allele Freq'].std()) + '\t' + str(sample_subset['Log R Ratio'].max()) +'\t' + str(sample_subset['Log R Ratio'].min()) + '\t' +
+					str(sample_subset['B Allele Freq'].max()) + '\t' + str(sample_subset['Log R Ratio'].min()) +'\n')
+				del sample_subset
+			final_report_stats.flush()
+			'''
 		# creates a cleaned VCF in addition to the cleaned PLINK file
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_QC'),
