@@ -213,7 +213,7 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Minimum call rate:  "+ str("%.2f" % round(basic_call_stats[3]*100, 2)) + '%', 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Maximum missing call rate:  "+ str("%.2f" % round(basic_call_stats[4]*100, 2)) + '%', 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Maximum call rate:  "+ str("%.2f" % round(basic_call_stats[4]*100, 2)) + '%', 1, 1, 'L')
 	
 
 	# store batch and chip number of sample that fails missingness threshold
@@ -594,9 +594,9 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_summary.set_x(40)
 	batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(min(batch_call_averages), 2))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(min(batch_call_averages), 4))+'%)', 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.2f" % round(max(batch_call_averages), 2))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(max(batch_call_averages), 4))+'%)', 1, 1, 'L')
 
 
 	return cleanup, failing_chip_IDs, batch_summary
