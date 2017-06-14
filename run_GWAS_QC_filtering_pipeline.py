@@ -202,7 +202,8 @@ class Pipeline(BasePipeline):
 			print "Making new directory called "+str(pipeline_args['projectName']) + ' located in ' + str(pipeline_args['outDir'])
 			outdir = pipeline_args['outDir']+'/'+pipeline_args['projectName']
 			os.mkdir(outdir)
-		'''
+
+
 		# create PDF object for output
 		pdf_title = FPDF()
 		pdf_title.add_page()
@@ -453,8 +454,11 @@ class Pipeline(BasePipeline):
 			duplicate_concordance = {'total_overlapping_calls':overlaps.group(1), 'total_nonmissing': nonmissing.group(1), 'total_concordant':concordant.group(1), 'percent_concordance':str("%.2f" % round(float(concordant_rate.group(1))*100, 2))}
 
 
-			stage_for_deletion.extend([])
-		
+			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4] + '_dup1.bed', pipeline_args['inputPLINK'][:-4] + '_dup1.bim', pipeline_args['inputPLINK'][:-4] + '_dup1.fam', pipeline_args['inputPLINK'][:-4] + '_dup1.hh'])
+			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4] + '_dup2.bed', pipeline_args['inputPLINK'][:-4] + '_dup2.bim', pipeline_args['inputPLINK'][:-4] + '_dup2.fam', pipeline_args['inputPLINK'][:-4] + '_dup2.hh'])
+			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.bed', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.bim', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.fam', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.hh'])
+			stage_for_deletion.extend([outdir + '/update_trio_names.txt'])
+			
 		else: # there are no duplicates in the data set
 			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str("%.2f" % round(int(0)*100, 2))}	
 
@@ -787,8 +791,6 @@ class Pipeline(BasePipeline):
 		for files in stage_for_deletion:
 			subprocess.call(['rm', '-rf', files])
 		
-		'''
-		
 		
 		if pipeline_args['finalReport'] != None:
 			final_report_stats = open(outdir + '/final_report_statistics_per_sample.txt', 'w')
@@ -819,30 +821,9 @@ class Pipeline(BasePipeline):
 				del sample_subset
 			final_report_stats.close()	
 
-
-			'''
-			final_report_stats = open(outdir + '/final_report_statistics_per_sample.txt', 'w')
-			final_report_stats.write('\t'.join(['Sample_ID', 'median_LLR', 'mean_LRR', 'std_LRR', 'median_BAF', 'mean_BAF', 'std_BAF', 'max_LLR', 'min_LLR', 'max_BAF', 'min_BAF']) + '\n')
-			path, header = pipeline_args['finalReport'].split(',')
-			
-			#failing_snps = pandas.read_table(snps_failing_QC_details.name, usecols=[0], names=['snps'])
-			#print "shape_fail "+ str(failing_snps.shape)
-			final_table_full = pandas.read_table(path, header=[int(header)])
-			print "shape_full "+ str(final_table_full.shape)
-			#table_cleaned = final_table_full.loc[~final_table_full['SNP Name'].isin(list(failing_snps['snps']))]
-			#print "shape_table_cleaned "+ str(table_cleaned.shape)
-			all_samples = list(final_table_full['Sample ID'])
-			del final_table_full
-			del failing_snps
-			for sample in all_samples:
-				sample_subset = final_table_full.loc[final_table_full['Sample ID'] == sample]
-				final_report_stats.write(str(sample) + '\t' + str(sample_subset['Log R Ratio'].median()) + '\t' + str(sample_subset['Log R Ratio'].mean()) +'\t' +
-					str(sample_subset['Log R Ratio'].std()) + '\t' + str(sample_subset['B Allele Freq'].median()) + '\t' + str(sample_subset['B Allele Freq'].mean()) + '\t' +
-					str(sample_subset['B Allele Freq'].std()) + '\t' + str(sample_subset['Log R Ratio'].max()) +'\t' + str(sample_subset['Log R Ratio'].min()) + '\t' +
-					str(sample_subset['B Allele Freq'].max()) + '\t' + str(sample_subset['Log R Ratio'].min()) +'\n')
-				del sample_subset
-			final_report_stats.flush()
-			'''
+			for key in samples:
+				subprocess.call(['rm', '-rf', key])
+		
 		# creates a cleaned VCF in addition to the cleaned PLINK file
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_QC'),
