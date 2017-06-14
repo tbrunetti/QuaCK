@@ -812,8 +812,12 @@ class Pipeline(BasePipeline):
 						samples[f.name] = 1
 				f.close()
 
+			
+			failing_snp_names = [key for key in reasons_snps_fail]
 			for key in samples:
-				sample_subset = pandas.read_table(key)
+				sample_subset_raw = pandas.read_table(key)
+				sample_subset = sample_subset_raw[~sample_subset_raw['SNP Name'].isin(failing_snp_names)]
+				del sample_subset_raw
 				final_report_stats.write(str(key.split('/')[-1][:-4]) + '\t' + str(sample_subset['Log R Ratio'].median()) + '\t' + str(sample_subset['Log R Ratio'].mean()) +'\t' +
 					str(sample_subset['Log R Ratio'].std()) + '\t' + str(sample_subset['B Allele Freq'].median()) + '\t' + str(sample_subset['B Allele Freq'].mean()) + '\t' +
 					str(sample_subset['B Allele Freq'].std()) + '\t' + str(sample_subset['Log R Ratio'].max()) +'\t' + str(sample_subset['Log R Ratio'].min()) + '\t' +
