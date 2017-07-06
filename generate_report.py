@@ -148,10 +148,10 @@ def explanation_of_deliverables(pdf, params):
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, 'Due to the nature of the size of these data sets, we can only keep them on our FTP servers for a limited time before we \
 		archive them to save on space.  With that in mind, we would like you to please take a look at the deliverables and files immediately in \
-		the event you need access to other files or need something to be re-run.  You will have 2 WEEKS from the date you received the deliverables \
-		to email us with any questions or concerns or to download data that was not provided to you in the zipped files.  After this 2 week window \
-		we will archive all the data and place it on a storage server for 6 months before deleting it from our system.  Please be aware, if you request \
-		access to the archived data you will be charged for download time.'+'\n\n', 0, 1, 'L')
+		the event you need access to other files or need something to be re-run.  You will have 3 WEEKS from the date you received the deliverables \
+		to download the data and to email us with any questions or concerns or to download data that was not provided to you in the \
+		zipped files.  After this 3 week window we will archive all the data and place it on a storage server for 6 months before deleting it from our system.  \
+		Please be aware, if you request access to the archived data you will be charged for download time.'+'\n\n', 0, 1, 'L')
 	pdf.set_font('Arial', 'BI', 16)
 	pdf.set_x(20)
 	pdf.multi_cell(0, 10, 'QC Analysis', 0, 1, 'L')
@@ -159,9 +159,9 @@ def explanation_of_deliverables(pdf, params):
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, 'The default parameters set on this pipeline have been tested and optimized for studies that have a minimum of 500 samples. \
 		If your data has fewer samples than this we cannot guarantee the parameters are the most optimal.  It is possible that some of the threshold set \
-		may need to be less stringent.  It is up to you to notify us within 2 WEEKS of receiving the reports if you would like to re-run the pipeline under \
+		may need to be less stringent.  It is up to you to notify us within 3 WEEKS of receiving the reports if you would like to re-run the pipeline under \
 		different threholds.  The pipeline is also publically available on our website at <our.website.edu> if you choose to run the pipeline yourself.  Please \
-		be aware if you ask us to re-run the pipeline on our server after the 2 week mark, you will be charged for additional time.'+'\n\n\n\n\n', 0, 1, 'L')
+		be aware if you ask us to re-run the pipeline on our server after the 3 week mark, you will be charged for additional time.'+'\n\n\n\n\n', 0, 1, 'L')
 	pdf.multi_cell(0, 5,  'Thank you for your understanding and please feel free to contact us with any questions for concerns.', 0, 1, 'L')
 
 
