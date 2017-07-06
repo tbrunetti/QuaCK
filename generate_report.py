@@ -31,7 +31,7 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon)
 		quality control pipeline that was performed as well as parameters and thresholds that were used.  At the end \
 		of the PDF there is also a definitions page that lists what each metric means and how it was calculated.  If you \
 		have any questions or concerns please contact the TICR department at the University of Colorado Anschutz Medical \
-		Campus at <email@ucdenver.edu>. "+'\n\n\n\n\n', 0, 1, 'J')
+		Campus at tonya.brunetti@ucdenver.edu. "+'\n\n\n\n\n', 0, 1, 'J')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.set_fill_color(200)
 	pdf.multi_cell(0, 8, "Sample Summary", 1, 'L', True)
@@ -56,9 +56,7 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon)
 	# this is the total number of snps released samples x snps
 	pdf.multi_cell(0, 8, "Total genotypes passing QC: "+str(int(num_samples_qc_pass) * int(num_snps_qc_pass)), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Percent missing data: ", 1, 1, 'L')
-	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Percent HapMap trio concordance with 1000 Genomes: " +str(concordance['percent_concordance'])+'%', 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Average HapMap trio concordance with 1000 Genomes: " +str(concordance)+'%', 1, 1, 'L')
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Percent duplicate concordance: "+str(dupCon['percent_concordance'])+'%', 1, 1, 'L')
 
@@ -120,7 +118,7 @@ def explanation_of_deliverables(pdf, params):
 	pdf.multi_cell(0, 10, 'Text Files', 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.set_x(25)
-	pdf.multi_cell(0, 5, 'Six text files are provided:', 0, 1, 'J')
+	pdf.multi_cell(0, 5, 'Seven text files are provided:', 0, 1, 'J')
 	pdf.set_x(35)
 	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
 		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' + 'md5_check_sum.txt' + '\n\n', 0, 1, 'L') 
@@ -131,9 +129,10 @@ def explanation_of_deliverables(pdf, params):
 		the value that the particular SNP was calculated for that parameter.' +'\n' + '     The samples_failing_QC_details.txt is formatted similarly to the snps_failing_QC_details.txt \
 		files, except there is an additional column, which is the first column of the files that contains the family ID followed by the second column which \
 		contains the sample ID.' +'\n' + '     Both GenomeStudio text files are files that contain some infomation that we use in the initial step of our QC pipeline \
-		regarding your samples and SNPs.  For more information on what the columns mean please refer to the glossary report PDF.' +'\n' '     Finally, we provide a \
-		md5_check_sums.txt file that lists the md5 check sums of all the generated files to ensure files are not altered or corrupted during the transfer \
-		process.'+'\n\n', 0, 1, 'J')
+		regarding your samples and SNPs.  For more information on what the columns mean please refer to the glossary report PDF.' +'\n' '     We also provide a \
+		separate file called trio_reports.txt that give infomration on how well the trios performed against 1000 genomes as well as the number of Mendel errors \
+		in each family. Finally, we provide a md5_check_sums.txt file that lists the md5 check sums of all the generated files to ensure files are not altered \
+		or corrupted during the transfer process.'+'\n\n', 0, 1, 'J')
 
 	# add disclaimer about storage
 	pdf.add_page()
