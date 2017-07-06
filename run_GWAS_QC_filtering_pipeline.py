@@ -56,7 +56,7 @@ class Pipeline(BasePipeline):
 	def check_input_format(inputPlinkfile, plink):
 		if inputPlinkfile[-4:].lower() == '.ped':
 			print "Input .ped, converting to binary"
-			convert = subprocess.call(['./'+str(plink), '--file', str(inputPlinkfile[:-4]), '--make-bed', '--out', str(inputPlinkfile[:-4])])
+			convert = subprocess.call([str(plink), '--file', str(inputPlinkfile[:-4]), '--make-bed', '--out', str(inputPlinkfile[:-4])])
 
 		elif inputPlinkfile[-4:].lower() == '.bed':
 			print "Input seems to follow bed format"
@@ -193,6 +193,7 @@ class Pipeline(BasePipeline):
 		import PyPDF2
 		from fpdf import FPDF
 		import re
+		import numpy as np
 
 		# specifying output location and conflicting project names of files generated	
 		try:
@@ -259,7 +260,7 @@ class Pipeline(BasePipeline):
 
 
 
-	# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
+		# NOTE! If X is already split, it will appear as an error in log file but it will not affect any of the downstream processes
 		#plink_general.run(
 		#	Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
 		#	Parameter('--split-x', self.extract_X_boundries(pipeline_args['genome_build'])[0], self.extract_X_boundries(pipeline_args['genome_build'])[1]),
@@ -268,7 +269,7 @@ class Pipeline(BasePipeline):
 		#	)
 		# remove Illumina sample and SNP initial QC (not including call rate):
 		# convert list to temporary file for PLINK
-		
+	
 		snps_to_remove_illumina = open(outdir+'/snps_to_remove_illumina.txt', 'w')
 		snps_to_remove_illumina.write('\n'.join(snps_to_remove))
 		plink_general.run(
@@ -280,11 +281,11 @@ class Pipeline(BasePipeline):
 			)
 
 		stage_for_deletion.append(outdir+'/snps_to_remove_illumina.txt')
-
+		
 
 		# ----------------------------------------- BEGIN TRIO CHECKS ----------------------------------------------------
 		# fam_file and dict_samples are used in both trio and duplication concordance checks
-
+		average_hap_map_concordance = []
 		fam_file = pandas.read_table(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam', delim_whitespace=True, header=None, names=['FID', 'IID', 'PED', 'MAT', 'GEN', 'AFF'])
 		dict_samples = dict(zip(fam_file.FID, fam_file.IID))
 
@@ -294,94 +295,184 @@ class Pipeline(BasePipeline):
 		
 		trios = [(fid, iid, iid.split('_')[-1]) for fid, iid in dict_samples.iteritems() if iid.split('_')[-1][0:2] == 'NA']
 		
+		hapmap_info_sheet = pandas.read_table(pipeline_config['hapmap_info']['path'], header=0) # store hapmap info sheet as dataframe
+
 		
 		if len(trios) > 0:
 			
+			trios_run_together_update = {} # key is batch, value is list of lists of FID, IID, NAxxxx, NAxxxx
+			trios_run_together = {} # key is batch,value is list of lists of FID and IID
 			trio_ids_only = {x[2]:[x[0], x[1]] for x in trios} # will be useful for calculating Mendel errors
 
 			for samples in trios:
-				get_trios.write(str(samples[0]) + '\t' + str(samples[1]) + '\n') # PLINK format to extract samplesi"q
+				get_trios.write(str(samples[0]) + '\t' + str(samples[1]) + '\n') # PLINK format to extract samples
 				update_trio_names.write(str(samples[0]) + '\t' + str(samples[1]) + '\t' + str(samples[2]) + '\t' + str(samples[2]) + '\n') # PLINK format for updating FID/IID
 			
+				batch_id, remainder = samples[1].split('-')
+
+				if batch_id in trios_run_together:
+					trios_run_together_update[batch_id].append([str(samples[0]), str(samples[1]), str(samples[2]), str(samples[2])])
+					trios_run_together[batch_id].append([str(samples[0]), str(samples[1])])
+				else:
+					trios_run_together_update[batch_id] = [[str(samples[0]), str(samples[1]), str(samples[2]), str(samples[2])]]
+					trios_run_together[batch_id] = [[str(samples[0]),str(samples[1])]]
+
+
 			get_trios.flush() # push out buffer contents
 			update_trio_names.flush() # push out buffer contents
 
-			
-			# makes bed of HapMap trios
-			plink_general.run(
-				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
-				Parameter('--keep', get_trios.name),
-				Parameter('--make-bed'),
-				Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios')
-				)
-			
-			# updates HapMap trio IDs to be concordant with 1000 genomes
-			plink_general.run(
-				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
-				Parameter('--update-ids', update_trio_names.name),
-				Parameter('--make-bed'),
-				Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated')
-				)
 
-			# trio concordance check
-			# Need to extract just NA followed by number part of trios and rename FID and IID with the NA ID (ONLY TO CHECK FOR 1000 GENOMES CONCORDANCE)
-			plink_general.run(
-				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated'),
-				Parameter('--bmerge', pipeline_config['thousand_genomes']['path'][:-4]),
-				Parameter('--merge-mode', '7'),
-				Parameter('--out', outdir + '/trio_concordance_1000genomes')
-				)
+			# TESTING TRIO#
+			trio_rates = open(outdir + '/trio_reports.txt', 'w')
+			header = ['sample_1', 'sample_2', 'sample_3', 'total_overlapping_calls', 'total_nonmissing', 'total_concordant', 'percent_concordance', 'total_mendel_errors_in_family']
+			trio_rates.write('\t'.join(header) + '\n')
 
 
-			extract_lines = subprocess.Popen(['tail', '-4', outdir + '/trio_concordance_1000genomes.log'], stdout=subprocess.PIPE)
-			get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
-			# regex to sift through the concorance lines from above
-			overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
-			nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
-			concordant = re.search('([0-9]*)\sconcordant', get_concordance)
-			concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
-			# this dictionary is eventually passed to a call in generate_report.py (def overall_main_page_stats)
-			thous_trio_concordace = {'total_overlapping_calls':overlaps.group(1), 'total_nonmissing': nonmissing.group(1), 'total_concordant':concordant.group(1), 'percent_concordance':str("%.2f" % round(float(concordant_rate.group(1))*100, 2))}
-			print concordant_rate.group(1)
+			for key,value in trios_run_together.iteritems():
+				temp_trio_file_extract = open(outdir + '/temp_trio_file_extract.txt', 'w')
+				temp_trio_file_update = open(outdir + '/temp_trio_file_update.txt', 'w')
+				if len(value) == 3:
+					values = trios_run_together_update.get(key)
+					for trio in value:
+						temp_trio_file_extract.write('\t'.join(trio) + '\n') # FID, IID	
+					for trio in values:
+						temp_trio_file_update.write('\t'.join(trio) + '\n')
 
-			hapmap_info_sheet = pandas.read_table(pipeline_config['hapmap_info']['path'], header=0)
-			trios_info = hapmap_info_sheet.loc[hapmap_info_sheet['IID'].isin([key for key in trio_ids_only])]
-			dict_trio_fids =  dict(zip(trios_info.IID, trios_info.FID))
-			rename_mendel = open(outdir + '/mendel_renamed_families.txt', 'w')
-			for key, value in dict_trio_fids.iteritems():
-				rename_mendel.write(str(trio_ids_only[key][0]) + '\t' + str(trio_ids_only[key][1]) + '\t' + str(value) + '\t' + str(key) + '\n')
+					temp_trio_file_extract.flush()
+					temp_trio_file_update.flush()
 
-			rename_mendel.flush()
+
+					# makes bed of HapMap trio subsets
+					plink_general.run(
+						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
+						Parameter('--keep', temp_trio_file_extract.name),
+						Parameter('--make-bed'),
+						Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp')
+						)
+					
+					# updates HapMap trio IDs to be concordant with 1000 genomes subsets
+					plink_general.run(
+						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp'),
+						Parameter('--update-ids', temp_trio_file_update.name),
+						Parameter('--make-bed'),
+						Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp_updated')
+						)
+
+					# trio concordance check against 1000 genomes
+					# Need to extract just NA followed by number part of trios and rename FID and IID with the NA ID (ONLY TO CHECK FOR 1000 GENOMES CONCORDANCE)
+					plink_general.run(
+						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp_updated'),
+						Parameter('--bmerge', pipeline_config['thousand_genomes']['path'][:-4]),
+						Parameter('--merge-mode', '7'),
+						Parameter('--out', outdir + '/trio_concordance_1000genomes')
+						)
+
+					extract_lines = subprocess.Popen(['tail', '-4', outdir + '/trio_concordance_1000genomes.log'], stdout=subprocess.PIPE)
+					get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
+					# regex to sift through the concorance lines from above
+					overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
+					nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
+					concordant = re.search('([0-9]*)\sconcordant', get_concordance)
+					concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
+					
+
+					for ids in value:
+						trio_rates.write(str(ids[1]) + '\t')
+					trio_rates.write(str(overlaps.group(1)) + '\t' + str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str("%.2f" % float(concordant_rate.group(1))*100) + '\t')
+
+
+					
+					average_hap_map_concordance.append(round(float(concordant_rate.group(1))*100, 2))
+
+					update_child = open(outdir + '/update_child.txt', 'w')
+					update_sex = open(outdir + '/update_sex.txt', 'w')
+					kinship = {}
+					hapmap_genders = {}
+					update_info = trios_run_together_update.get(key, 'DNE')
+					updated_FID = []
+					if update_info != 'DNE':
+						for trios in update_info:
+							print trios
+							try:
+								fid = hapmap_info_sheet.loc[hapmap_info_sheet['IID'] == trios[2], 'FID'].iloc[0]
+								trios[2] = str(fid)
+								print trios
+								relationship = hapmap_info_sheet.loc[hapmap_info_sheet['IID'] == trios[3], 'REL'].iloc[0]
+								print relationship
+								kinship[relationship] = trios[3]
+								sex = hapmap_info_sheet.loc[hapmap_info_sheet['IID'] == trios[3], 'SEX'].iloc[0]
+								if sex == 'Female':
+									hapmap_genders[trios[3]] = 'F'
+								elif sex == 'Male':
+									hapmap_genders[trios[3]] = 'M'
+								updated_FID.append(trios)
+							except:
+								print('ERROR: IID ' + str(trios[2]) + ' not found!')
+
+						print kinship
+						update_child.write(str(fid) + '\t' + str(kinship.get('child')) + '\t' + str(kinship.get('father')) + '\t' + str(kinship.get('mother')) + '\n')
+						update_child.flush()
+						for indivs in hapmap_genders:
+							update_sex.write(str(fid) + '\t' + str(indivs) + '\t' + hapmap_genders.get(indivs) +'\n')
+						update_sex.flush()
+
+
+					mendel_renames = open(outdir + '/mendel_renames.txt', 'w')
+					for each_hapmap in updated_FID:
+						mendel_renames.write('\t'.join(each_hapmap) + '\n')
+					mendel_renames.flush()
+
+					plink_general.run(
+						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp'),
+						Parameter('--update-ids', mendel_renames.name),
+						Parameter('--make-bed'),
+						Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families')
+						)
+
+
+					plink_general.run(
+						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families'),
+						Parameter('--update-parents', update_child.name),
+						Parameter('--make-bed'),
+						Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families_child_updated')
+						)
+
+					plink_general.run(
+						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families_child_updated'),
+						Parameter('--update-sex', update_sex.name),
+						Parameter('--make-bed'),
+						Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child')
+						)
+
+					# .lmendel is one line per variant [CHR, SNP, N]
+					# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
+					# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
+					plink_general.run(
+						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child'),
+						Parameter('--mendel'),
+						Parameter('--out', outdir + '/mendel_errors_'+str(key))
+						)
+
+					try:
+						with open(outdir + '/mendel_errors_'+str(key)+'.fmendel') as errors:
+							header = next(errors)
+							for line in errors:
+								line = line.rstrip().split()
+							trio_rates.write(str(line[-1]) + '\n')
+					except:
+						trio_rates.write('NA' + '\n')
+
 			del hapmap_info_sheet
-			del trios_info
-
-			plink_general.run(
-				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios'),
-				Parameter('--update-ids', rename_mendel.name),
-				Parameter('--make-bed'),
-				Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families')
-				)
-
-
-			# .lmendel is one line per variant [CHR, SNP, N]
-			# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
-			# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
-			plink_general.run(
-				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_mendel_families'),
-				Parameter('--mendel'),
-				Parameter('--out', outdir + '/mendel_errors')
-				)
-
-
+			trio_rates.flush()
+			
+			'''
 			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.bed', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.bim', 
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bed',
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bim', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.log',
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.nosex', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.log',
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.nosex'])
+			'''
 
-		else:
-			# NO TRIOS IN DATASET
-			thous_trio_concordace = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str("%.2f" % round(int(0)*100, 2))}	
 
 		# ----------------------------------------- END OF TRIO CHECKS ----------------------------------------------------
 
@@ -449,7 +540,7 @@ class Pipeline(BasePipeline):
 			overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
 			nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
 			concordant = re.search('([0-9]*)\sconcordant', get_concordance)
-			concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(\.[0-9]*|[0-9]*)', get_concordance)
+			concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
 			# this dictionary is eventually passed to a call in generate_report.py (def overall_main_page_stats)
 			duplicate_concordance = {'total_overlapping_calls':overlaps.group(1), 'total_nonmissing': nonmissing.group(1), 'total_concordant':concordant.group(1), 'percent_concordance':str("%.2f" % round(float(concordant_rate.group(1))*100, 2))}
 
@@ -460,7 +551,7 @@ class Pipeline(BasePipeline):
 			stage_for_deletion.extend([outdir + '/update_trio_names.txt'])
 			
 		else: # there are no duplicates in the data set
-			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str("%.2f" % round(int(0)*100, 2))}	
+			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str("%.2f" % int(0)*100)}	
 
 
 		# ----------------------------------------- END OF DUPLICATION CHECKS ----------------------------------------------------
@@ -710,7 +801,7 @@ class Pipeline(BasePipeline):
 
 
 		pdf_summary_page = FPDF()
-		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=thous_trio_concordace, dupCon=duplicate_concordance)
+		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=np.mean(average_hap_map_concordance), dupCon=duplicate_concordance)
 
 		pdf_title.output(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf', 'F')
 		pdf.output(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf', 'F')
@@ -785,6 +876,7 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.imiss')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.sexcheck')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.*')
+
 		
 		# actually remove files in stage_for_deletion
 		print '\n\n' + "Cleaning up project directory"
