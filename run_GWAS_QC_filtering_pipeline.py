@@ -378,7 +378,7 @@ class Pipeline(BasePipeline):
 
 					for ids in value:
 						trio_rates.write(str(ids[1]) + '\t')
-					trio_rates.write(str(overlaps.group(1)) + '\t' + str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str("%.2f" % float(concordant_rate.group(1))*100) + '\t')
+					trio_rates.write(str(overlaps.group(1)) + '\t' + str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str("{0:.2f}".format(float(concordant_rate.group(1))*100)) + '\t')
 
 
 					
@@ -458,7 +458,7 @@ class Pipeline(BasePipeline):
 							header = next(errors)
 							for line in errors:
 								line = line.rstrip().split()
-							trio_rates.write(str(line[-1]) + '\n')
+						trio_rates.write(str(line[-1]) + '\n')
 					except:
 						trio_rates.write('NA' + '\n')
 				else:
