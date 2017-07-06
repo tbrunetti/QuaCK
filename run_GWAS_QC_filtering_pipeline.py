@@ -461,6 +461,9 @@ class Pipeline(BasePipeline):
 							trio_rates.write(str(line[-1]) + '\n')
 					except:
 						trio_rates.write('NA' + '\n')
+				else:
+					values = trios_run_together_update.get(key)
+					trio_rates.write('ERROR: NOT FULL TRIO' + '\t' + str(values) + '\n')
 
 			del hapmap_info_sheet
 			trio_rates.flush()
