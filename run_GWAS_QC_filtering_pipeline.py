@@ -34,7 +34,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--finalReport', default=None, type=str, help='[default:None] Comma separated list. Ex. Full path to tab-delimited genome studio final report with Log R Ratio and B allele frequency column,line header begins on with starting index at 0, line0 = line1, line1=line2, etc... \
 																			if header columns begin on the 5th line, the parameter input should be the following: /path/to/file,4 ')
 		parser.add_argument('--arrayType', default='Illumina MEGA', type=str, help='Name of array or chip used for SNPs')
-		parser.add_argument('--outDir', default=os.getcwd(), type=str, help='[default:current working directory] Full path to output directory, (note a new directory is made in this directory')
+		parser.add_argument('--outDir', default=os.getcwd(), type=str, help='[default:current working directory] Full path to output directory, do not add last / to path! (note a new directory is made in this directory')
 		parser.add_argument('--projectName', default=str(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")), type=str, help="Name of project or owner of project")
 		parser.add_argument('--callrate', default=0.97, type=float, help="[default:0.97] minimum call rate to be included in sample set")
 		parser.add_argument('--snp_callrate', default=0.97, type=float, help='[default:0.97] minimum call rate for SNP to be included in autosomal SNP set (anything below this value will be removed')
