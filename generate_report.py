@@ -590,8 +590,12 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
 	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
-	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
+	if len(batch_call_averages) > 1: # std deviation can't be calculated if less than 2 batches exist due to no variance
+		batch_summary.set_x(40)
+		batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
+	else:
+		batch_summary.set_x(40)
+		batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: 0.00", 1, 1, 'L')
 	batch_summary.set_x(40)
 	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(min(batch_call_averages), 4))+'%)', 1, 1, 'L')
 	batch_summary.set_x(40)
