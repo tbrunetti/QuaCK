@@ -1,6 +1,8 @@
 from fpdf import FPDF
 import re
 import pandas
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import statistics as stats
 import collections
