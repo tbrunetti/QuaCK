@@ -468,13 +468,16 @@ class Pipeline(BasePipeline):
 			del hapmap_info_sheet
 			trio_rates.flush()
 			
-			'''
+			
 			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.bed', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.bim', 
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bed',
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bim', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.log',
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.nosex', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.log',
-								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.nosex'])
-			'''
+								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.nosex', outdir + '/mendel_errors_'+str(key)+'.imendel', outdir + '/mendel_errors_'+str(key)+'.lmendel', 
+								outdir + '/mendel_errors_'+str(key)+'.fmendel', outdir + '/mendel_errors_'+str(key)+'.hh', outdir + '/update_child.txt', 
+								outdir +'/update_sex.txt', outdir +'/trio_concordance_1000genomes.diff', outdir + '/temp_trio_file_extract.txt',
+								outdir + '/temp_trio_file_update.txt'])
+			
 
 
 		# ----------------------------------------- END OF TRIO CHECKS ----------------------------------------------------
