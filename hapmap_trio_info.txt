@@ -1,0 +1,273 @@
+IID	SEX	FID	REL
+NA19238	Female	Y117	mother
+NA19240	Female	Y117	child
+NA19239	Male	Y117	father
+NA19193	Female	Y112	mother
+NA19192	Male	Y112	father
+NA19194	Male	Y112	child
+NA19099	Female	Y105	mother
+NA19100	Female	Y105	child
+NA19098	Male	Y105	father
+NA19131	Female	Y101	mother
+NA19132	Female	Y101	child
+NA19130	Male	Y101	father
+NA19127	Female	Y077	mother
+NA19129	Female	Y077	child
+NA19128	Male	Y077	father
+NA19143	Female	Y074	mother
+NA19144	Male	Y074	father
+NA19145	Male	Y074	child
+NA19152	Female	Y072	mother
+NA19153	Male	Y072	father
+NA19154	Male	Y072	child
+NA19140	Female	Y071	mother
+NA19141	Male	Y071	father
+NA19142	Male	Y071	child
+NA19116	Female	Y060	mother
+NA19119	Male	Y060	father
+NA19120	Male	Y060	child
+NA19222	Female	Y058	mother
+NA19221	Female	Y058	child
+NA19223	Male	Y058	father
+NA19159	Female	Y056	mother
+NA19160	Male	Y056	father
+NA19161	Male	Y056	child
+NA19206	Female	Y051	mother
+NA19207	Male	Y051	father
+NA19208	Male	Y051	child
+NA19209	Female	Y050	mother
+NA19210	Male	Y050	father
+NA19211	Male	Y050	child
+NA19204	Female	Y048	mother
+NA19203	Male	Y048	father
+NA19205	Male	Y048	child
+NA19172	Female	Y047	mother
+NA19171	Male	Y047	father
+NA19173	Male	Y047	child
+NA19201	Female	Y045	mother
+NA19202	Female	Y045	child
+NA19200	Male	Y045	father
+NA19137	Female	Y043	mother
+NA19138	Male	Y043	father
+NA19139	Male	Y043	child
+NA19102	Female	Y042	mother
+NA19101	Male	Y042	father
+NA19103	Male	Y042	child
+NA19093	Female	Y040	mother
+NA19094	Female	Y040	child
+NA19092	Male	Y040	father
+NA18912	Female	Y028	mother
+NA18913	Male	Y028	father
+NA18914	Male	Y028	child
+NA18861	Female	Y024	mother
+NA18862	Male	Y024	father
+NA18863	Male	Y024	child
+NA18855	Female	Y023	mother
+NA18856	Male	Y023	father
+NA18857	Male	Y023	child
+NA18852	Female	Y018	mother
+NA18853	Male	Y018	father
+NA18854	Male	Y018	child
+NA18870	Female	Y017	mother
+NA18871	Male	Y017	father
+NA18872	Male	Y017	child
+NA18523	Female	Y016	mother
+NA18522	Male	Y016	father
+NA18521	Male	Y016	child
+NA18517	Female	Y013	mother
+NA18516	Male	Y013	father
+NA18515	Male	Y013	child
+NA18858	Female	Y012	mother
+NA18859	Male	Y012	father
+NA18860	Male	Y012	child
+NA18508	Female	Y009	mother
+NA18507	Male	Y009	father
+NA18506	Male	Y009	child
+NA18505	Female	Y005	mother
+NA18504	Male	Y005	father
+NA18503	Male	Y005	child
+NA18502	Female	Y004	mother
+NA18501	Male	Y004	father
+NA18500	Male	Y004	child
+NA18908	Male	Y122	father
+NA18510	Male	Y121	father
+NA19247	Female	Y120	mother
+NA19248	Male	Y120	father
+NA19249	Male	Y120	child
+NA19235	Female	Y116	mother
+NA19237	Female	Y116	child
+NA19236	Male	Y116	father
+NA19190	Female	Y111	mother
+NA19189	Male	Y111	father
+NA19191	Male	Y111	child
+NA19214	Female	Y110	mother
+NA19215	Female	Y110	child
+NA19213	Male	Y110	father
+NA19118	Female	Y100	mother
+NA19117	Male	Y100	father
+NA19174	Male	Y100	child
+NA19257	Female	Y092	mother
+NA19256	Male	Y092	father
+NA19258	Male	Y092	child
+NA19114	Female	Y079	mother
+NA19115	Female	Y079	child
+NA19113	Male	Y079	father
+NA19147	Female	Y075	mother
+NA19148	Female	Y075	child
+NA19146	Male	Y075	father
+NA19149	Female	Y073	mother
+NA19151	Female	Y073	child
+NA19150	Male	Y073	father
+NA19122	Female	Y061	mother
+NA19121	Male	Y061	father
+NA19123	Male	Y061	child
+NA19225	Female	Y057	mother
+NA19226	Male	Y057	father
+NA19224	Male	Y057	child
+NA19182	Female	Y052	mother
+NA19183	Female	Y052	child
+NA19181	Male	Y052	father
+NA19176	Female	Y044	mother
+NA19175	Male	Y044	father
+NA19177	Male	Y044	child
+NA19095	Female	Y041	mother
+NA19097	Female	Y041	child
+NA19096	Male	Y041	father
+NA19185	Female	Y039	mother
+NA19184	Male	Y039	father
+NA19186	Male	Y039	child
+NA19179	Female	Y038	mother
+NA19180	Female	Y038	child
+NA19178	Male	Y038	father
+NA18933	Female	Y036	mother
+NA18934	Male	Y036	father
+NA18935	Male	Y036	child
+NA19197	Female	Y035	mother
+NA19199	Female	Y035	child
+NA19198	Male	Y035	father
+NA18924	Female	Y033	mother
+NA18923	Male	Y033	father
+NA18925	Male	Y033	child
+NA18916	Female	Y030	mother
+NA18930	Female	Y030	child
+NA18917	Male	Y030	father
+NA18909	Female	Y027	mother
+NA18910	Male	Y027	father
+NA18911	Male	Y027	child
+NA18907	Female	Y025	mother
+NA19252	Male	Y025	child
+NA18873	Female	Y019	mother
+NA18875	Female	Y019	child
+NA18874	Male	Y019	father
+NA18520	Female	Y014	mother
+NA18518	Female	Y014	child
+NA18519	Male	Y014	father
+NA18511	Female	Y010	mother
+NA18509	Male	Y010	child
+NA18867	Female	Y007	mother
+NA18868	Male	Y007	father
+NA18869	Male	Y007	child
+NA19108	Female	Y006	mother
+NA19109	Female	Y006	child
+NA19107	Male	Y006	father
+NA18499	Female	Y003	mother
+NA18498	Male	Y003	father
+NA18497	Male	Y003	child
+NA18489	Female	Y002	mother
+NA18487	Male	Y002	father
+NA18485	Male	Y002	child
+NA18488	Female	Y001	mother
+NA18484	Female	Y001	child
+NA18486	Male	Y001	father
+NA12878	Female	CEPH1463	mother
+NA12892	Female	CEPH1463	maternal grandmother
+NA12891	Male	CEPH1463	maternal grandfather
+NA12873	Female	CEPH1459	paternal grandmother
+NA12865	Female	CEPH1459	mother
+NA12875	Female	CEPH1459	maternal grandmother
+NA12872	Male	CEPH1459	paternal grandfather
+NA12874	Male	CEPH1459	maternal grandfather
+NA12864	Male	CEPH1459	father
+NA12813	Female	CEPH1454	paternal grandmother
+NA12802	Female	CEPH1454	mother
+NA12815	Female	CEPH1454	maternal grandmother
+NA12812	Male	CEPH1454	paternal grandfather
+NA12814	Male	CEPH1454	maternal grandfather
+NA12801	Male	CEPH1454	father
+NA12761	Female	CEPH1447	paternal grandmother
+NA12753	Female	CEPH1447	mother
+NA12763	Female	CEPH1447	maternal grandmother
+NA12760	Male	CEPH1447	paternal grandfather
+NA12762	Male	CEPH1447	maternal grandfather
+NA12752	Male	CEPH1447	father
+NA12740	Female	CEPH1444	mother
+NA12751	Female	CEPH1444	maternal grandmother
+NA12750	Male	CEPH1444	maternal grandfather
+NA12004	Female	CEPH1420	paternal grandmother
+NA10839	Female	CEPH1420	mother
+NA12006	Female	CEPH1420	maternal grandmother
+NA12003	Male	CEPH1420	paternal grandfather
+NA12003	Male	CEPH1420	paternal grandfather
+NA12005	Male	CEPH1420	maternal grandfather
+NA10838	Male	CEPH1420	father
+NA12249	Female	CEPH1416	paternal grandmother
+NA12248	Male	CEPH1416	paternal grandfather
+NA10835	Male	CEPH1416	father
+NA12236	Female	CEPH1408	paternal grandmother
+NA10831	Female	CEPH1408	mother
+NA12156	Female	CEPH1408	maternal grandmother
+NA12154	Male	CEPH1408	paternal grandfather
+NA12155	Male	CEPH1408	maternal grandfather
+NA10830	Male	CEPH1408	father
+NA10863	Female	CEPH1375	mother
+NA12234	Female	CEPH1375	maternal grandmother
+NA12264	Male	CEPH1375	maternal grandfather
+NA11993	Female	CEPH1362	paternal grandmother
+NA10861	Female	CEPH1362	mother
+NA11995	Female	CEPH1362	maternal grandmother
+NA11992	Male	CEPH1362	paternal grandfather
+NA11994	Male	CEPH1362	maternal grandfather
+NA10860	Male	CEPH1362	father
+NA12717	Female	CEPH1358	paternal grandmother
+NA12716	Male	CEPH1358	paternal grandfather
+NA12707	Male	CEPH1358	father
+NA11830	Female	CEPH1350	paternal grandmother
+NA10855	Female	CEPH1350	mother
+NA11832	Female	CEPH1350	maternal grandmother
+NA11829	Male	CEPH1350	paternal grandfather
+NA11831	Male	CEPH1350	maternal grandfather
+NA10856	Male	CEPH1350	father
+NA10854	Female	CEPH1349	mother
+NA11840	Female	CEPH1349	maternal grandmother
+NA11839	Male	CEPH1349	maternal grandfather
+NA10859	Female	CEPH1347	mother
+NA11882	Female	CEPH1347	maternal grandmother
+NA11881	Male	CEPH1347	maternal grandfather
+NA12044	Female	CEPH1346	paternal grandmother
+NA12043	Male	CEPH1346	paternal grandfather
+NA10857	Male	CEPH1346	father
+NA07348	Female	CEPH1345	mother
+NA07345	Female	CEPH1345	maternal grandmother
+NA07357	Male	CEPH1345	maternal grandfather
+NA12057	Female	CEPH1344	paternal grandmother
+NA12056	Male	CEPH1344	paternal grandfather
+NA10851	Male	CEPH1344	father
+NA07055	Female	CEPH1341	paternal grandmother
+NA06991	Female	CEPH1341	mother
+NA06985	Female	CEPH1341	maternal grandmother
+NA07034	Male	CEPH1341	paternal grandfather
+NA06993	Male	CEPH1341	maternal grandfather
+NA07048	Male	CEPH1341	father
+NA07000	Female	CEPH1340	paternal grandmother
+NA07019	Female	CEPH1340	mother
+NA07056	Female	CEPH1340	maternal grandmother
+NA06994	Male	CEPH1340	paternal grandfather
+NA07022	Male	CEPH1340	maternal grandfather
+NA07029	Male	CEPH1340	father
+NA12145	Female	CEPH1334	paternal grandmother
+NA10847	Female	CEPH1334	mother
+NA12239	Female	CEPH1334	maternal grandmother
+NA12144	Male	CEPH1334	paternal grandfather
+NA12146	Male	CEPH1334	maternal grandfather
+NA10846	Male	CEPH1334	father
+
