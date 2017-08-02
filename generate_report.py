@@ -244,9 +244,9 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 		warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 		sample_quality_graph = sns.jointplot('Call Rate','p10 GC', data=sampleInfo, kind="reg")
-		sns.plt.suptitle('Overall Sample Quality')
-		sns.plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-		sns.plt.savefig(outDir+'/'+'sample_gccallrate.png')
+		plt.suptitle('Overall Sample Quality')
+		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
+		plt.savefig(outDir+'/'+'sample_gccallrate.png')
 		plt.close()
 		pdf.image(outDir+'/'+"sample_gccallrate.png", x=20, y=120, w=170)
 		cleanup.append(outDir+'/'+"sample_gccallrate.png")  # puts image in line for deletion; happens after final PDF has been generated
@@ -269,11 +269,11 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 	pdf.multi_cell(0, 30, "Overall Sex Concordance Check", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
 	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
-	sorted_sex_check_dataframe = sex_check_dataframe.sort(['F'], ascending=True)
+	sorted_sex_check_dataframe = sex_check_dataframe.sort_values(['F'], ascending=True)
 	sorted_sex_check_dataframe['rank'] = list(range(1, len(list(sorted_sex_check_dataframe['FID']))+1))
 	
 	sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
-	sns.plt.suptitle('Sex and F coefficient based on pedigree sex data')
+	plt.suptitle('Sex and F coefficient based on pedigree sex data')
 	sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'sample_sex.png', bbox_inches='tight')
@@ -282,7 +282,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 	cleanup.append(outDir+'/'+"sample_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
-	sns.plt.suptitle('Sex and F coefficient based on imputed sex data')
+	plt.suptitle('Sex and F coefficient based on imputed sex data')
 	imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeing coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'imputed_sex.png', bbox_inches='tight')
@@ -291,8 +291,8 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 	cleanup.append(outDir+'/'+"imputed_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
-	sns.plt.suptitle('Discrepencies between imputed and pedigree data')
-	sns.plt.subplots_adjust(top=.9)
+	plt.suptitle('Discrepencies between imputed and pedigree data')
+	plt.subplots_adjust(top=.9)
 	discrepencies_bw_imputed_and_collected.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'discrepencies_sex.png', bbox_inches='tight')
@@ -376,7 +376,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	missing_call_dataframe['missing call rate']=missing_call_dataframe['missing call rate'].astype(float)*100
 	missing_genotypes = sns.boxplot(x='missing call rate', y='batch', data=missing_call_dataframe, color=".8")
 	missing_genotypes = sns.stripplot(x='missing call rate', y='batch', data=missing_call_dataframe, jitter=True)
-	sns.plt.suptitle('Overall missing call rate per sample across batches')
+	plt.suptitle('Overall missing call rate per sample across batches')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'missing_call_rate_samples.png')
 	plt.close()
@@ -405,12 +405,12 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		pdf.multi_cell(0, 30, "Sample Statistics for Batch ID: "+str(key), 0, 1, 'L')
 		pdf.line(20, 30, 190, 30) 
 		batch_dataframe = pandas.DataFrame(batch_sex[key], columns=['Discrepencies', 'PEDSEX', 'SNPSEX', 'F', 'well'])
-		sorted_sex_batch_dataframe = batch_dataframe.sort(['F'], ascending=True)
+		sorted_sex_batch_dataframe = batch_dataframe.sort_values(['F'], ascending=True)
 		sorted_sex_batch_dataframe['rank'] = list(range(1, len(list(sorted_sex_batch_dataframe['well']))+1))
 		
 		# all sex based batch analysis
 		sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_batch_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
-		sns.plt.suptitle('Sex and F coefficient based on pedigree sex data')
+		plt.suptitle('Sex and F coefficient based on pedigree sex data')
 		sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 		plt.savefig(outDir+'/'+'sample_sex'+str(key)+'.png', bbox_inches='tight')
@@ -419,7 +419,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		cleanup.append(outDir+'/'+"sample_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
 		imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_batch_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
-		sns.plt.suptitle('Sex and F coefficient based on imputed sex data')
+		plt.suptitle('Sex and F coefficient based on imputed sex data')
 		imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 		plt.savefig(outDir+'/'+'imputed_sex'+str(key)+'.png', bbox_inches='tight')
@@ -429,7 +429,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 
 
 		discrepencies_sex = sns.lmplot(x='rank', y='F', hue='Discrepencies', data=sorted_sex_batch_dataframe, fit_reg=False, palette={"OK":'black', "PROBLEM":'red'}, scatter_kws={"s": 20})
-		sns.plt.suptitle('Discrepencies between imputed and pedigree data')
+		plt.suptitle('Discrepencies between imputed and pedigree data')
 		discrepencies_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 		plt.savefig(outDir+'/'+'discrepencies_sex'+str(key)+'.png', bbox_inches='tight')
