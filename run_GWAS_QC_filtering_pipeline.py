@@ -145,7 +145,6 @@ class Pipeline(BasePipeline):
 			pdf.multi_cell(0, 5, "This is the table of call rate statistics for " + str(chrm) + " SNPs which passed Illumina recommended sample and SNP QC.  \
 				This was calculated by extracting all " + str(chrm) + ' SNPs from all Illumina QC passing samples and calculating the call rate \
 				excusively on the ' + str(chrm) + ' subset of SNPs', 0, 1, 'L')
-		
 		pdf.set_font('Arial', 'B', 14)
 		pdf.set_fill_color(200)
 		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs analyzed: " +str(total_snps), 1, 'L', True)
@@ -158,7 +157,7 @@ class Pipeline(BasePipeline):
 		pdf.multi_cell(0, 8, "Median " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.median(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		pdf.set_x(40)
 		pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.mean(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
-		pdf.set_x(40)	
+		pdf.set_x(40)
 		pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.stdev(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		pdf.set_x(40)
 		pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(min(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
@@ -166,7 +165,6 @@ class Pipeline(BasePipeline):
 		pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(max(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
 		
 		pdf.multi_cell(0, 8, '\n', 0, 1, 'L')
-
 		del missingness_snp
 		del samples
 		return snps_to_remove, remove_reasons
