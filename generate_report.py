@@ -76,20 +76,23 @@ def explanation_of_deliverables(pdf, params):
 	pdf.multi_cell(0, 10, 'Raw Plink Files', 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.set_x(25)
-	pdf.multi_cell(0, 5, 'Two PLINK files are provided: .PED and .MAP files.  These files contain the RAW PRE-FILTERED \
+	pdf.multi_cell(0, 5, 'Three PLINK files are provided: .BED, .BIM and .FAM files.  These files contain the RAW PRE-FILTERED \
 		samples and SNPs from your project.  These files can be used directly with PLINK software.  For more information regarding \
 		the PLINK format please refer to the following website https://www.cog-genomics.org/plink/1.9/'+'\n\n', 0, 1, 'J')
 
 	
 	pdf.set_font('Arial', 'BI', 16)
 	pdf.set_x(20)
-	pdf.multi_cell(0, 10, 'Cleaned Plink Files', 0, 1, 'L')
+	pdf.multi_cell(0, 10, 'Cleaned Plink and VCF Files', 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, 'Three PLINK files are provided: .BED, .BIM, and .FAM files.  These files contain the  \
-		samples and SNPs that have passed our QC pipeline from your project.  These files can be used directly with PLINK software. \
+		samples and SNPs that have passed our QC pipeline from your project.  The only samples that are removed from this data set are \
+		those that fail missingness thresholds.  All samples failing gender mismatches and ambiguities remain in the cleaned data set despite failing our QC thresholds \
+		in case the investigator can resolve these issues from their manifest file.  On the contrary, all SNPs that fail our QC thresholds are removed from the cleaned \
+		data set.  All these files can be used directly with PLINK software. \
 		For more information regarding the PLINK format please refer to the following website \
-		https://www.cog-genomics.org/plink/1.9/'+'\n\n', 0, 1, 'J')
+		https://www.cog-genomics.org/plink/1.9/  Additionally, a we provide the same cleaned data set as a VCF file  ' + '\n\n', 0, 1, 'J')
 
 
 	pdf.set_font('Arial', 'BI', 16)
@@ -120,21 +123,25 @@ def explanation_of_deliverables(pdf, params):
 	pdf.multi_cell(0, 10, 'Text Files', 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
 	pdf.set_x(25)
-	pdf.multi_cell(0, 5, 'Seven text files are provided:', 0, 1, 'J')
+	pdf.multi_cell(0, 5, 'Nine text files are provided:', 0, 1, 'J')
 	pdf.set_x(35)
 	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
-		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' + 'md5_check_sum.txt' + '\n\n', 0, 1, 'L') 
+		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' +  'trio_reports.txt' + 
+		'\n' + 'final_report_statistics_per_sample.txt'+ '\n' + 'md5_check_sum.txt' + '\n\n', 0, 1, 'L') 
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, '     The snps_failing_QC_details.txt is a tab-delimited file that contains all the SNPs that were removed due to failing at least \
 		one QC check.  Each line in the first column represents a single SNP name.  Any susequent columns in the line are reasons why the SNP failed. \
 		There may be more than one reason and each reason is a new column.  You will notice a number followed by the reasoning; this number represents \
 		the value that the particular SNP was calculated for that parameter.' +'\n' + '     The samples_failing_QC_details.txt is formatted similarly to the snps_failing_QC_details.txt \
 		files, except there is an additional column, which is the first column of the files that contains the family ID followed by the second column which \
-		contains the sample ID.' +'\n' + '     Both GenomeStudio text files are files that contain some infomation that we use in the initial step of our QC pipeline \
+		contains the sample ID.' +'\n' + '     Alhtough these samples fail QC, only those failing the missingness threshold are actually removed from the analysis.  \
+		Both GenomeStudio text files are files that contain some infomation that we use in the initial step of our QC pipeline \
 		regarding your samples and SNPs.  For more information on what the columns mean please refer to the glossary report PDF.' +'\n' '     We also provide a \
-		separate file called trio_reports.txt that give infomration on how well the trios performed against 1000 genomes as well as the number of Mendel errors \
-		in each family. Finally, we provide a md5_check_sums.txt file that lists the md5 check sums of all the generated files to ensure files are not altered \
-		or corrupted during the transfer process.'+'\n\n', 0, 1, 'J')
+		separate file called trio_reports.txt that gives information on how well the trios performed against 1000 genomes as well as the number of Mendel errors \
+		in each family and the concordance rate with 1000 genomes. For trios in which an individual has failed QC, we attempt to run a duo anlaysis assuming a parent \
+		and child still remain.  If this is not the case, we list it in the trio_reports.txt as ERROR: NOT FULL DUO OR TRIO. The final_report_statistics_per_sample.txt \
+		provides general statistics of the log R ratio and B allele frequencies at the per sample level of samples that pass QC.  Finally, we provide a md5_check_sums.txt file \
+		that lists the md5 check sums of all the generated files to ensure files are not altered or corrupted during the transfer process.'+'\n\n', 0, 1, 'J')
 
 	# add disclaimer about storage
 	pdf.add_page()
@@ -176,7 +183,7 @@ def thresholds_and_parameters(pdf, params):
 	pdf.line(20, 32, 190, 32)
 	pdf.set_font('Arial', '', 16)
 	for key in params:
-		if key not in ['sampleTable', 'snpTable', 'projectName', 'config', 'inputPLINK', 'outDir', 'arrayType']:
+		if key not in ['sampleTable', 'snpTable', 'projectName', 'config', 'inputPLINK', 'outDir', 'arrayType', 'finalReport']:
 			pdf.multi_cell(0, 8, str(key)+':     '+str(params[key]), 0, 1, 'L')
 
 
