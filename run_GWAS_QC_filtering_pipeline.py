@@ -31,8 +31,8 @@ class Pipeline(BasePipeline):
 		parser.add_argument('-sampleTable', required=True, type=str, help="[REQUIRED] Full path to text file of Illumina sample table metrics tab-delimited")
 		parser.add_argument('-snpTable', required=True, type=str, help="[REQUIRED] Full path to text file of Illumina SNP table tab-delimited")
 		parser.add_argument('-inputPLINK', required=True, type=str, help="Full path to PLINK file to be used in analysis corresponding MAP files or .bim,.fam should be located in same directory (ends in .PED or .BED)")
-		parser.add_argument('--finalReport', default=None, type=str, help='[default:None] Comma separated list. Ex. Full path to tab-delimited genome studio final report with Log R Ratio and B allele frequency column,line header begins on with starting index at 0, line0 = line1, line1=line2, etc... \
-																			if header columns begin on the 5th line, the parameter input should be the following: /path/to/file,4 ')
+		parser.add_argument('--finalReport', default=None, type=str, help='[default:None] Comma separated list. Ex. Full path to tab-delimited genome studio final report with Log R Ratio and B allele frequency column,line header begins on with starting index at 0,the column number where the Sample_ID is located. line0 = line1, line1=line2, etc... \
+																			if header columns begin on the 5th line and sample ID is in the 3rd column, then parameter input should be the following: /path/to/file,4,2 ')
 		parser.add_argument('--arrayType', default='Illumina MEGA', type=str, help='Name of array or chip used for SNPs')
 		parser.add_argument('--outDir', default=os.getcwd(), type=str, help='[default:current working directory] Full path to output directory, do not add last / to path! (note a new directory is made in this directory')
 		parser.add_argument('--projectName', default=str(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")), type=str, help="Name of project or owner of project")
@@ -329,7 +329,7 @@ class Pipeline(BasePipeline):
 			for key,value in trios_run_together.iteritems():
 				temp_trio_file_extract = open(outdir + '/temp_trio_file_extract.txt', 'w')
 				temp_trio_file_update = open(outdir + '/temp_trio_file_update.txt', 'w')
-				if len(value) == 3:
+				if len(value) == 3 or len(value) ==2:
 					values = trios_run_together_update.get(key)
 					for trio in value:
 						temp_trio_file_extract.write('\t'.join(trio) + '\n') # FID, IID	
@@ -374,10 +374,15 @@ class Pipeline(BasePipeline):
 					concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
 					
 
-					for ids in value:
-						trio_rates.write(str(ids[1]) + '\t')
-					trio_rates.write(str(overlaps.group(1)) + '\t' + str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str("{0:.2f}".format(float(concordant_rate.group(1))*100)) + '\t')
-
+					if len(value) == 3:
+						for ids in value:
+							trio_rates.write(str(ids[1]) + '\t')
+						trio_rates.write(str(overlaps.group(1)) + '\t' + str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str("{0:.2f}".format(float(concordant_rate.group(1))*100)) + '\t')
+					else:
+						for ids in value:
+							trio_rates.write(str(ids[1]) + '\t')
+						trio_rates.write('NA' + '\t')
+						trio_rates.write(str(overlaps.group(1)) + '\t' + str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str("{0:.2f}".format(float(concordant_rate.group(1))*100)) + '\t')
 
 					
 					average_hap_map_concordance.append(round(float(concordant_rate.group(1))*100, 2))
@@ -442,26 +447,50 @@ class Pipeline(BasePipeline):
 						Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child')
 						)
 
-					# .lmendel is one line per variant [CHR, SNP, N]
-					# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
-					# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
-					plink_general.run(
-						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child'),
-						Parameter('--mendel'),
-						Parameter('--out', outdir + '/mendel_errors_'+str(key))
-						)
+					
+					if len(value) == 3:
+						# .lmendel is one line per variant [CHR, SNP, N]
+						# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
+						# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
+						plink_general.run(
+							Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child'),
+							Parameter('--mendel'),
+							Parameter('--out', outdir + '/mendel_errors_'+str(key))
+							)
 
-					try:
-						with open(outdir + '/mendel_errors_'+str(key)+'.fmendel') as errors:
-							header = next(errors)
-							for line in errors:
-								line = line.rstrip().split()
-						trio_rates.write(str(line[-1]) + '\n')
-					except:
-						trio_rates.write('NA' + '\n')
+						try:
+							with open(outdir + '/mendel_errors_'+str(key)+'.fmendel') as errors:
+								header = next(errors)
+								for line in errors:
+									line = line.rstrip().split()
+							trio_rates.write(str(line[-1]) + '\n')
+						except:
+							trio_rates.write('NA trio' + '\n')
+					
+					else:
+						# .lmendel is one line per variant [CHR, SNP, N]
+						# .imendel one subsection per nuclear family, each subsection has one line per family member [FID, IID, N]
+						# .fmendel is one line per nuclear family [FID, PAT, MAT, CHLD, N]	
+						plink_general.run(
+							Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child'),
+							Parameter('--mendel'),
+							Parameter('--mendel-duos'),
+							Parameter('--out', outdir + '/mendel_errors_'+str(key))
+							)
+						try:
+							with open(outdir + '/mendel_errors_'+str(key)+'.fmendel') as errors:
+								header = next(errors)
+								for line in errors:
+									line = line.rstrip().split()
+							trio_rates.write(str(line[-1]) + '\n')
+						except:
+							trio_rates.write('not a parent-child duo' + '\n')
+
 				else:
 					values = trios_run_together_update.get(key)
-					trio_rates.write('ERROR: NOT FULL TRIO' + '\t' + str(values) + '\n')
+					trio_rates.write('ERROR: NOT FULL DUO OR TRIO' + '\t' + str(values) + '\n')
+					# try running as duo
+
 
 			del hapmap_info_sheet
 			trio_rates.flush()
@@ -892,18 +921,18 @@ class Pipeline(BasePipeline):
 			final_report_stats = open(outdir + '/final_report_statistics_per_sample.txt', 'w')
 			final_report_stats.write('\t'.join(['Sample_ID', 'median_LLR', 'mean_LRR', 'std_LRR', 'median_BAF', 'mean_BAF', 'std_BAF', 'max_LLR', 'min_LLR', 'max_BAF', 'min_BAF']) + '\n')
 			samples = {}
-			path, header = pipeline_args['finalReport'].split(',')
-			with open(path, 'r') as test:
+			path, header, sampleID = pipeline_args['finalReport'].split(',')
+			with open(path, 'r') as report:
 				f = open(outdir + '/header_stuff.txt', 'w')
-				for _ in xrange(9):
-					f.write(next(test))
-				true_header = next(test)
-				for line in test:
-					if outdir + '/' + str(line.rstrip().split('\t')[-1]) + '.txt' in samples:
+				for _ in xrange(int(header)):
+					f.write(next(report))
+				true_header = next(report)
+				for line in report:
+					if outdir + '/' + str(line.rstrip().split('\t')[5]) + '.txt' in samples:
 						f.write(line + '\n')
 					else:
 						f.close()
-						f = open(outdir + '/' + str(line.rstrip().split('\t')[-1]) + '.txt', 'w')
+						f = open(outdir + '/' + str(line.rstrip().split('\t')[int(sampleID)]) + '.txt', 'w')
 						f.write(true_header)
 						samples[f.name] = 1
 				f.close()
@@ -914,11 +943,17 @@ class Pipeline(BasePipeline):
 				sample_subset_raw = pandas.read_table(key)
 				sample_subset = sample_subset_raw[~sample_subset_raw['SNP Name'].isin(failing_snp_names)]
 				del sample_subset_raw
-				final_report_stats.write(str(key.split('/')[-1][:-4]) + '\t' + str(sample_subset['Log R Ratio'].median()) + '\t' + str(sample_subset['Log R Ratio'].mean()) +'\t' +
-					str(sample_subset['Log R Ratio'].std()) + '\t' + str(sample_subset['B Allele Freq'].median()) + '\t' + str(sample_subset['B Allele Freq'].mean()) + '\t' +
-					str(sample_subset['B Allele Freq'].std()) + '\t' + str(sample_subset['Log R Ratio'].max()) +'\t' + str(sample_subset['Log R Ratio'].min()) + '\t' +
-					str(sample_subset['B Allele Freq'].max()) + '\t' + str(sample_subset['B Allele Freq'].min()) +'\n')
-				del sample_subset
+				try:
+					final_report_stats.write(str(key.split('/')[-1][:-4]) + '\t' + str(sample_subset['Log R Ratio'].median()) + '\t' + str(sample_subset['Log R Ratio'].mean()) +'\t' +
+						str(sample_subset['Log R Ratio'].std()) + '\t' + str(sample_subset['B Allele Freq'].median()) + '\t' + str(sample_subset['B Allele Freq'].mean()) + '\t' +
+						str(sample_subset['B Allele Freq'].std()) + '\t' + str(sample_subset['Log R Ratio'].max()) +'\t' + str(sample_subset['Log R Ratio'].min()) + '\t' +
+						str(sample_subset['B Allele Freq'].max()) + '\t' + str(sample_subset['B Allele Freq'].min()) +'\n')
+					del sample_subset
+				except TypeError:
+					print 'Wrong type at key ' + str(key)
+				except MemoryError:
+					print 'Out of Memory at key ' + str(key)
+
 			final_report_stats.close()	
 
 			for key in samples:
