@@ -173,7 +173,7 @@ def explanation_of_deliverables(pdf, params):
 		may need to be less or more stringent.  It is up to you to notify us within 3 WEEKS of receiving the reports if you would like to re-run the pipeline under \
 		different threholds.  The pipeline is also publically available and is hosted on the following URL: https://github.com/tbrunetti/GWAS_QC_pipeline if you choose to run the pipeline yourself.  Please \
 		be aware if you ask us to re-run the pipeline on our server after the 3 week mark, you will be charged for additional time.'+'\n\n\n\n\n', 0, 1, 'L')
-	pdf.multi_cell(0, 5,  'Thank you for your understanding and please feel free to contact us with any questions for concerns.', 0, 1, 'L')
+	pdf.multi_cell(0, 5,  'Thank you for your understanding and please feel free to contact us with any questions or concerns.', 0, 1, 'L')
 
 
 def thresholds_and_parameters(pdf, params):
