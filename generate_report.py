@@ -389,8 +389,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	# missingness data read data into pandas dataframe
 	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate', 'wellID'])
 	missing_call_dataframe['missing call rate']=missing_call_dataframe['missing call rate'].astype(float)*100
-	missing_genotypes = sns.boxplot(x='missing call rate', y='batch', data=missing_call_dataframe, color=".8")
-	missing_genotypes = sns.stripplot(x='missing call rate', y='batch', data=missing_call_dataframe, jitter=True)
+	missing_genotypes = sns.boxplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, color=".8")
+	missing_genotypes = sns.stripplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
 	plt.suptitle('Overall missing call rate per sample across batches')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'missing_call_rate_samples.png')
