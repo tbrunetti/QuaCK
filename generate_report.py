@@ -282,6 +282,8 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 	sorted_sex_check_dataframe['rank'] = list(range(1, len(list(sorted_sex_check_dataframe['FID']))+1))
 	
 	sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
+	plt.axhline(y=float(maxF), linestyle="--")
+	plt.axhline(y=float(minF), linestyle="--")
 	plt.suptitle('Sex and F coefficient based on pedigree sex data')
 	sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
@@ -291,6 +293,8 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 	cleanup.append(outDir+'/'+"sample_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
+	plt.axhline(y=float(maxF), linestyle="--")
+	plt.axhline(y=float(minF), linestyle="--")
 	plt.suptitle('Sex and F coefficient based on imputed sex data')
 	imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeing coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
@@ -300,6 +304,8 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 	cleanup.append(outDir+'/'+"imputed_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
+	plt.axhline(y=float(maxF), linestyle="--")
+	plt.axhline(y=float(minF), linestyle="--")
 	plt.suptitle('Discrepencies between imputed and pedigree data')
 	plt.subplots_adjust(top=.9)
 	discrepencies_bw_imputed_and_collected.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
