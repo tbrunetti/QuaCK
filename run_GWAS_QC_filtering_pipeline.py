@@ -775,7 +775,7 @@ class Pipeline(BasePipeline):
 		pdf_internal_batch = FPDF()
 		# checks sex and call rate at the batch level
 		stage_for_deletion, failed_chips, batch_summary = generate_report.batch_effects(pdf=pdf_internal_batch, chipFail=pipeline_args['chipFailure'], sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', missingness=pipeline_args['inputPLINK'][:-4]+'_passing_QC.imiss', 
-			chip_missingness_fails=sample_fail_locations, outDir=outdir, cleanup=stage_for_deletion)
+			chip_missingness_fails=sample_fail_locations, maxF=pipeline_args['maxFemale'], minF=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
 		
 
 
