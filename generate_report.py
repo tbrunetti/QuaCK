@@ -43,7 +43,7 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon,
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Total samples passing QC:  "+str(num_samples_qc_pass), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Total samples requiring additional attention (gender discrepancies):  "+str(sexCheck), 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Total samples with gender discrepancies:  "+str(sexCheck), 1, 1, 'L')
 	pdf.multi_cell(0, 8, "\n\n", 0, 1, 'L')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.multi_cell(0, 8, "SNP Summary", 1, 'L', True)
