@@ -387,8 +387,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		callrate_per_batch = [[str(key), str(batch_missing[key][i][0]), str(batch_missing[key][i][1])] for i in range(0, len(batch_missing[key]))]
 		all_batch_callrate = all_batch_callrate + callrate_per_batch
 	# missingness data read data into pandas dataframe
-	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate', 'wellID'])
-	missing_call_dataframe['missing call rate']=missing_call_dataframe['missing call rate'].astype(float)*100
+	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate (%)', 'wellID'])
+	missing_call_dataframe['missing call rate (%)']=missing_call_dataframe['missing call rate (%)'].astype(float)*100
 	missing_genotypes = sns.boxplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, color=".8")
 	missing_genotypes = sns.stripplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
 	plt.suptitle('Overall missing call rate per sample across batches')
@@ -404,8 +404,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_call_averages_paired = {}
 	for batch_name in batch_missing:
 		temp = missing_call_dataframe.loc[missing_call_dataframe['batch'].isin([batch_name])]
-		batch_call_averages.append(temp['missing call rate'].mean())
-		batch_call_averages_paired[batch_name] = temp['missing call rate'].mean() 
+		batch_call_averages.append(temp['missing call rate (%)'].mean())
+		batch_call_averages_paired[batch_name] = temp['missing call rate (%)'].mean() 
 	
 	# record chip statistics
 	total_chips = 0
