@@ -770,7 +770,7 @@ class Pipeline(BasePipeline):
 
 		overall_sex_pdf = FPDF()
 		# not imbedded in Illumina Sample check because uses own input files
-		reason_samples_fail, total_discrepancies, stage_for_deletion = generate_report.graph_sexcheck(pdf=overall_sex_pdf, reason_samples_fail=reason_samples_fail, sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', maxF=pipeline_args['maxFemale'], minM=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
+		reason_samples_fail, total_discrepancies, stage_for_deletion = generate_report.graph_sexcheck(pdf=overall_sex_pdf, reason_samples_fail=reason_samples_fail, sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', maxF=pipeline_args['maxFemale'], minF=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		pdf_internal_batch = FPDF()
 		# checks sex and call rate at the batch level
