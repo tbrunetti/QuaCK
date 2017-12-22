@@ -267,7 +267,7 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 
 
 
-def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, cleanup):
+def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 	print "checking sex concordance"
@@ -319,8 +319,8 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minM, outDir, clean
 	# determines which discrepenices are probably human error prone versus sample quality error
 	problem_calls_only = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['PROBLEM'])]
 	concordant_calls = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['OK'])]
-	fixed_sex = list(problem_calls_only[(problem_calls_only['F'] >= minM) | (problem_calls_only['F'] <= maxF)]['IID'])
-	indeterminate_sex = list(problem_calls_only[(problem_calls_only['F'] < minM) | (problem_calls_only['F'] > maxF)]['IID'])
+	fixed_sex = list(problem_calls_only[(problem_calls_only['F'] >= minF) | (problem_calls_only['F'] <= maxF)]['IID'])
+	indeterminate_sex = list(problem_calls_only[(problem_calls_only['F'] < minF) | (problem_calls_only['F'] > maxF)]['IID'])
 	pdf.set_font('Arial', 'B', 16)
 	pdf.set_fill_color(200)
 	pdf.multi_cell(0, 10, 'Total Number of Concordant Samples:  ' +  str(len(concordant_calls.index)), 1, 'L', True)
