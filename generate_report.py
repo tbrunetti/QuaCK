@@ -303,20 +303,20 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=85, w=79, h=85)
 	cleanup.append(outDir+'/'+"imputed_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
-	discrepencies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
+	discrepancies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
 	plt.axhline(y=float(maxF), linestyle="--")
 	plt.axhline(y=float(minF), linestyle="--")
-	plt.suptitle('Discrepencies between imputed and pedigree data')
+	plt.suptitle('Discrepancies between imputed and pedigree data')
 	plt.subplots_adjust(top=.9)
-	discrepencies_bw_imputed_and_collected.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
+	discrepancies_bw_imputed_and_collected.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-	plt.savefig(outDir+'/'+'discrepencies_sex.png', bbox_inches='tight')
+	plt.savefig(outDir+'/'+'discrepancies_sex.png', bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"discrepencies_sex.png", x=20, y=190, w=79, h=85)
-	cleanup.append(outDir+'/'+"discrepencies_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
+	pdf.image(outDir+'/'+"discrepancies_sex.png", x=20, y=190, w=79, h=85)
+	cleanup.append(outDir+'/'+"discrepancies_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 	
 
-	# determines which discrepenices are probably human error prone versus sample quality error
+	# determines which discrepanices are probably human error prone versus sample quality error
 	problem_calls_only = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['PROBLEM'])]
 	concordant_calls = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['OK'])]
 	fixed_sex = list(problem_calls_only[(problem_calls_only['F'] >= minF) | (problem_calls_only['F'] <= maxF)]['IID'])
@@ -324,7 +324,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	pdf.set_font('Arial', 'B', 16)
 	pdf.set_fill_color(200)
 	pdf.multi_cell(0, 10, 'Total Number of Concordant Samples:  ' +  str(len(concordant_calls.index)), 1, 'L', True)
-	pdf.multi_cell(0, 10, 'Total Number of Discrepencies:  '+str(len(indeterminate_sex)), 1, 'L', True)
+	pdf.multi_cell(0, 10, 'Total Number of Discrepancies:  '+str(len(indeterminate_sex)), 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
 	pdf.multi_cell(0, 10, '# of outlier samples with clear gender mismatches:  '+str(len(fixed_sex)), 1, 1, 'L')
@@ -419,7 +419,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		pdf.set_margins(20, 10, 20)
 		pdf.multi_cell(0, 30, "Sample Statistics for Batch ID: "+str(key), 0, 1, 'L')
 		pdf.line(20, 30, 190, 30) 
-		batch_dataframe = pandas.DataFrame(batch_sex[key], columns=['Discrepencies', 'PEDSEX', 'SNPSEX', 'F', 'well'])
+		batch_dataframe = pandas.DataFrame(batch_sex[key], columns=['Discrepancies', 'PEDSEX', 'SNPSEX', 'F', 'well'])
 		sorted_sex_batch_dataframe = batch_dataframe.sort_values(['F'], ascending=True)
 		sorted_sex_batch_dataframe['rank'] = list(range(1, len(list(sorted_sex_batch_dataframe['well']))+1))
 		
@@ -447,25 +447,25 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		cleanup.append(outDir+'/'+"imputed_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
 
-		discrepencies_sex = sns.lmplot(x='rank', y='F', hue='Discrepencies', data=sorted_sex_batch_dataframe, fit_reg=False, palette={"OK":'black', "PROBLEM":'red'}, scatter_kws={"s": 20})
+		discrepancies_sex = sns.lmplot(x='rank', y='F', hue='Discrepancies', data=sorted_sex_batch_dataframe, fit_reg=False, palette={"OK":'black', "PROBLEM":'red'}, scatter_kws={"s": 20})
 		plt.axhline(y=float(maxF), linestyle="--")
 		plt.axhline(y=float(minF), linestyle="--")
-		plt.suptitle('Discrepencies between imputed and pedigree data')
-		discrepencies_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
+		plt.suptitle('Discrepancies between imputed and pedigree data')
+		discrepancies_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-		plt.savefig(outDir+'/'+'discrepencies_sex'+str(key)+'.png', bbox_inches='tight')
+		plt.savefig(outDir+'/'+'discrepancies_sex'+str(key)+'.png', bbox_inches='tight')
 		plt.close()
-		pdf.image(outDir+'/'+"discrepencies_sex"+str(key)+'.png', x=20, y=190, w=79, h=85)
-		cleanup.append(outDir+'/'+"discrepencies_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+		pdf.image(outDir+'/'+"discrepancies_sex"+str(key)+'.png', x=20, y=190, w=79, h=85)
+		cleanup.append(outDir+'/'+"discrepancies_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
 
-		contradictions_headers = sorted_sex_batch_dataframe['Discrepencies'].value_counts().index.tolist()
-		contradictions = sorted_sex_batch_dataframe['Discrepencies'].value_counts()
+		contradictions_headers = sorted_sex_batch_dataframe['Discrepancies'].value_counts().index.tolist()
+		contradictions = sorted_sex_batch_dataframe['Discrepancies'].value_counts()
 		
 		if 'PROBLEM' not in contradictions_headers:
 			pdf.set_font('Arial', 'B', 14)
 			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1,'L')
 			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  100.0%", 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+'0', 0, 1, 'L')
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepancies:   "+'0', 0, 1, 'L')
 
 			# calculate total number of chips in batch
 			all_wells = list(sorted_sex_batch_dataframe['well'])
@@ -478,9 +478,9 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 			pdf.set_font('Arial', 'B', 14)
 			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
 			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  '0.0%", 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
-			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
-			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepancies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
+			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepancies'] == 'PROBLEM']['well'])
+			pdf.multi_cell(0, 8, "Wells with Sex Discrepancies:  " + ', '.join(problem_wells))
 			
 			# calculate total number of chips in batch
 			all_wells = list(sorted_sex_batch_dataframe['well'])
@@ -523,9 +523,9 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 			pdf.set_font('Arial', 'B', 14)
 			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
 			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str("%.2f" % round((float(contradictions['OK'])/float(len(batch_sex[key])))*100, 2))+'%', 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepencies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
-			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepencies'] == 'PROBLEM']['well'])
-			pdf.multi_cell(0, 8, "Wells with Sex Discrepencies:  " + ', '.join(problem_wells))
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepancies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
+			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepancies'] == 'PROBLEM']['well'])
+			pdf.multi_cell(0, 8, "Wells with Sex Discrepancies:  " + ', '.join(problem_wells))
 
 			# calculate total number of chips in batch
 			all_wells = list(sorted_sex_batch_dataframe['well'])
