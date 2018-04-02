@@ -318,21 +318,25 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 
 	# determines which discrepanices are probably human error prone versus sample quality error
 	problem_calls_only = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['PROBLEM'])]
+	gender_not_in_manifest = problem_calls_only.loc[problem_calls_only['PEDSEX'] == 0]
 	concordant_calls = sorted_sex_check_dataframe.loc[sorted_sex_check_dataframe['STATUS'].isin(['OK'])]
 	fixed_sex = list(problem_calls_only[(problem_calls_only['F'] >= minF) | (problem_calls_only['F'] <= maxF)]['IID'])
 	indeterminate_sex = list(problem_calls_only[(problem_calls_only['F'] < minF) | (problem_calls_only['F'] > maxF)]['IID'])
+	unknown_sex = list(gender_not_in_manifest['IID'])
 	pdf.set_font('Arial', 'B', 16)
 	pdf.set_fill_color(200)
 	pdf.multi_cell(0, 10, 'Total Number of Concordant Samples:  ' +  str(len(concordant_calls.index)), 1, 'L', True)
 	pdf.multi_cell(0, 10, 'Total Number of Discrepancies:  '+str(len(indeterminate_sex)), 1, 'L', True)
 	pdf.set_font('Arial', '', 16)
 	pdf.set_x(30)
-	pdf.multi_cell(0, 10, '# of outlier samples with clear gender mismatches:  '+str(len(fixed_sex)), 1, 1, 'L')
+	pdf.multi_cell(0, 10, '# of outlier samples with clear gender mismatches:  '+str(len(fixed_sex)-len(unknown_sex)), 1, 1, 'L')
 	pdf.set_x(30)
 	pdf.multi_cell(0, 10, '# of ambiguous samples:  '+str(len(indeterminate_sex)-len(fixed_sex)), 1, 1, 'L')
+	pdf.set_x(30)
+	pdf.multi_cell(0, 10, '# of gender not specified samples:  '+str(len(unknown_sex)), 1, 1, 'L')
 
 
-	ambiguous_samples = list(set(indeterminate_sex) - set(fixed_sex)) # ambiguous sample IDs onlyq
+	ambiguous_samples = list(set(indeterminate_sex) - set(fixed_sex)) # ambiguous sample IDs only
 
 	with open(reason_samples_fail.name, 'a+') as sex_outliers:
 		for sample in fixed_sex:
@@ -344,7 +348,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 
 		sex_outliers.flush()
 
-	return sex_outliers, str(len(indeterminate_sex)), cleanup
+	return sex_outliers, str(len(indeterminate_sex)-len(unknown_sex)), cleanup
 
 def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, maxF, minF, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
@@ -422,6 +426,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		batch_dataframe = pandas.DataFrame(batch_sex[key], columns=['Discrepancies', 'PEDSEX', 'SNPSEX', 'F', 'well'])
 		sorted_sex_batch_dataframe = batch_dataframe.sort_values(['F'], ascending=True)
 		sorted_sex_batch_dataframe['rank'] = list(range(1, len(list(sorted_sex_batch_dataframe['well']))+1))
+		unknown_sex_ped = batch_dataframe.loc[batch_dataframe['PEDSEX'] == 0]
+		total_unknown_sex_ped = len(list(unknown_sex_ped['well']))
 		
 		# all sex based batch analysis
 		sample_sex = sns.lmplot(x='rank', y='F', hue='PEDSEX', data=sorted_sex_batch_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
@@ -523,8 +529,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 			pdf.set_font('Arial', 'B', 14)
 			pdf.multi_cell(0, 8, "Total Samples in Batch:   "+str(len(batch_sex[key])), 0, 1, 'L')
 			pdf.multi_cell(0, 8, "Percent Sex Concordance in Batch:  " + str("%.2f" % round((float(contradictions['OK'])/float(len(batch_sex[key])))*100, 2))+'%', 0, 1, 'L')
-			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepancies:   "+ str(contradictions['PROBLEM']), 0, 1, 'L')
-			problem_wells = list(sorted_sex_batch_dataframe[sorted_sex_batch_dataframe['Discrepancies'] == 'PROBLEM']['well'])
+			pdf.multi_cell(0, 8, "Total Samples with Sex Discrepancies:   "+ str(contradictions['PROBLEM'] - total_unknown_sex_ped), 0, 1, 'L')
+			problem_wells = list(sorted_sex_batch_dataframe.loc[(sorted_sex_batch_dataframe['Discrepancies'] == 'PROBLEM') & (sorted_sex_batch_dataframe['PEDSEX'] != 0)]['well'])
 			pdf.multi_cell(0, 8, "Wells with Sex Discrepancies:  " + ', '.join(problem_wells))
 
 			# calculate total number of chips in batch
