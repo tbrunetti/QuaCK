@@ -289,7 +289,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'sample_sex.png', bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"sample_sex.png", x=20, y=85, w=79, h=85)
+	pdf.image(outDir+'/'+"sample_sex.png", x=20, y=105, w=79, h=85)
 	cleanup.append(outDir+'/'+"sample_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
@@ -300,7 +300,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'imputed_sex.png', bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=85, w=79, h=85)
+	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=105, w=79, h=85)
 	cleanup.append(outDir+'/'+"imputed_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 
 	discrepancies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
@@ -312,7 +312,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
 	plt.savefig(outDir+'/'+'discrepancies_sex.png', bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"discrepancies_sex.png", x=20, y=190, w=79, h=85)
+	pdf.image(outDir+'/'+"discrepancies_sex.png", x=20, y=210, w=79, h=85)
 	cleanup.append(outDir+'/'+"discrepancies_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
 	
 
@@ -608,10 +608,10 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_summary.multi_cell(0, 10, 'Total Number of Chips:  ' +  str(total_chips), 1, 'L', True)
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, 'Total Chips Failing due to Sex: ' + str(total_chips_fail), 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Sex: ' + str(total_chips_fail), 1, 1, 'L')
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, 'Total Chips Failing due to Missingness: ' + str(chip_fails_from_missigness), 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Missingness: ' + str(chip_fails_from_missigness), 1, 1, 'L')
 
 	batch_summary.set_font('Arial', 'B', 16)
 	batch_summary.set_fill_color(200)
