@@ -9,6 +9,7 @@
 5. [Installation and Configuration](#installation-and-configuration)
 6. [Running the Pipeline](#running-the-pipeline)
 7. [Output and Deliverables](#output-and-deliverables)
+8. [Quick Start](#quick-start-instructions)
 
 ## Overview and Purpose
 ------------------------
@@ -25,6 +26,22 @@ The purpose of this pipeline is to automate the first stage of genotyping qualit
 
 ## Genome Studio Work Flow
 --------------------------
+**GS Prep Instructions and Considerations for MEGA and MEGA Custom Genotyping Chips**  
+1.  Make sure all samples are included in the sample sheet (CSV)  
+    * Did you include previous pilot samples that were not re-run on the full project  
+    * Did you include all original and re-run samples?  
+2.  Sample_ID column in the sample seet is required to be in the following format: WG[plateNumber]-DNA_[wellPosition A01-H12]_[sampleName]  --no whitespaces please!
+    * Ex: WG1-DNA_B02_343523 would mean that sample ID 343523 was run on plate 1 in well position B02  
+3.  When loading idats into GS, make sure none of the idats are gzipped or GS will not recognize them  
+4.  Do not include samples where the well is empty or the sample failed due to wet-lab issues (ex: chip was loaded incorrectly, iScan problems, etc...)  
+
+**Exporting Files out of GS for MEGA and MEGA Custom Genotyping Chips**  
+1.  If CNV analysis is requested, perform all CNV calculation in GS using the CNV anlaysis module/plug-in  
+2.  Export sample table (all columns and all samples)  
+3.  Export SNP table (all columns and all snps)  
+4.  Export PLINK file  
+5.  Export final report (required columns are: SNP Name, Sample ID, Allele1-Top, Allele2-Top, GC Score, Sample Name, Chr, Position, Theta, R, X, Y, B Allele Freq, Log R Ratio ; if CNV is requested please make sure the following columns are added in addtion to the required columns: CNV Value, CNV Confidence)  If you are not sure or don't feel comfortable exporting specific columns, just export everything.  Additional columns will not affect the analysis.)  
+
 
 
 
@@ -172,7 +189,7 @@ There are many options for the user to customize the pipeline for their own pers
 | --chipFailure | 1 | maximum number of sex discrepencies and failed sample missingness threshold  on a chip before considered failing |
 
 
-## Ouput and Deliverables
+## Output and Deliverables
 --------------------------
 There are 3 types of files that are output from this pipeline once it has been successfully completed: PLINK files, PDF reports, text files.  
 
@@ -186,3 +203,7 @@ There are 3 types of files that are output from this pipeline once it has been s
   * snps_failing_QC_details.txt
   * samples_failing_QC_details.txt
   * md5_check_sum.txt
+
+## Quick Start Instructions
+----------------------------
+Coming Soon!
