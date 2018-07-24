@@ -1,5 +1,15 @@
 # GWAS_QC_pipeline
 
+## Table of Contents
+--------------------
+1. [Overview and Purpose](#overview-and-purpose)
+2. [Genome Studio Work Flow](#genome-studio-work-flow)
+3. [Software Requirements](#software-requirements)
+4. [Input File Requirements](#user-generated-file-requirements)
+5. [Installation and Configuration](#installation-and-configuration)
+6. [Running the Pipeline](#running-the-pipeline)
+7. [Output and Deliverables](#output-and-deliverables)
+
 ## Overview and Purpose
 ------------------------
 The purpose of this pipeline is to automate the first stage of genotyping quality control and create deliverables for users.  These deliverables are PDF reports regarding QC statistics on the sample and SNP level of a genotyping experiment as well as cleaned PLINK files that can be used for the round 2 of QC analysis as well as downstream analysis.  Although only a single command is used to run the pipeline once it has been installed and configured, it does have two components that run on the backend.
@@ -11,7 +21,12 @@ The purpose of this pipeline is to automate the first stage of genotyping qualit
 </p>
 <p align="center">
 <img src="https://github.com/tbrunetti/GWAS_QC_pipeline_ver_1.0/blob/master/QC-pipeline-workflow.png" />
-</p>
+</p>  
+
+## Genome Studio Work Flow
+--------------------------
+
+
 
 ## Software Requirements
 ------------------------
