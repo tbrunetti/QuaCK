@@ -29,8 +29,8 @@ The purpose of this pipeline is to automate the first stage of genotyping qualit
 **GS Prep Instructions and Considerations for MEGA and MEGA Custom Genotyping Chips**  
 1.  Make sure all samples are included in the sample sheet (CSV)  
     * Did you include previous pilot samples that were not re-run on the full project  
-    * Did you include all original and re-run samples?  
-2.  Sample_ID column in the sample seet is required to be in the following format: WG[plateNumber]-DNA_[wellPosition A01-H12]_[sampleName]  --no whitespaces please!
+    * Did you include all original and re-run samples? (due to genotyping call rate being too low initially)
+2.  Sample_ID column in the sample sheet is required to be in the following format: WG[plateNumber]-DNA_[wellPosition A01-H12]_[sampleName]  --no whitespaces please!
     * Ex: WG1-DNA_B02_343523 would mean that sample ID 343523 was run on plate 1 in well position B02  
 3.  When loading idats into GS, make sure none of the idats are gzipped or GS will not recognize them  
 4.  Do not include samples where the well is empty or the sample failed due to wet-lab issues (ex: chip was loaded incorrectly, iScan problems, etc...)  
