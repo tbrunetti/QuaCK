@@ -26,6 +26,11 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	total_non_autosomes = len(list(non_autosomes['Name']))
 	total_missing_chr = len(list(missing_chr['Name']))
 
+	print("total snps: {}".format(total_snps))
+	print("total autosomes: {}".format(total_autosomes))
+	print("total non autosomes: {}".format(total_non_autosomes))
+	print("total missing chromosomes: {}".format(total_missing_chr))
+
 
 	columns_for_analysis = []
 	print "		Extracting headers needed for analysis"
@@ -69,8 +74,9 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	print "		Calculating five-number summary statstics"
 	all_stats = {}
 	for header_stats in columns_for_analysis:
-		all_stats[header_stats] = [stats.median(list(snp_qc_table[header_stats])), stats.mean(list(snp_qc_table[header_stats])), stats.stdev(list(snp_qc_table[header_stats])), 
-					min(list(snp_qc_table[header_stats])), max(list(snp_qc_table[header_stats]))]
+		print header_stats
+		all_stats[header_stats] = [snp_qc_table[header_stats].median(skipna=True), snp_qc_table[header_stats].mean(skipna=True), snp_qc_table[header_stats].std(skipna=True), 
+					snp_qc_table[header_stats].min(skipna=True), snp_qc_table[header_stats].max(skipna=True)]
 
 	print "		Extracting failed SNPs"
 
