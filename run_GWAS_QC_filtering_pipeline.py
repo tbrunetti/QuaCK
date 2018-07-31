@@ -261,6 +261,7 @@ class Pipeline(BasePipeline):
 		# no actual removal happens here, just list removal and records statistics in PDF
 		sample_qc_table, remove_samples_text, reason_samples_fail, sample_fail_locations, stage_for_deletion = generate_report.illumina_sample_overview(inputFile=pipeline_args['sampleTable'], fam=pipeline_args['inputPLINK'][:-4]+'.fam', pdf=pdf, callrate=pipeline_args['callrate'], outDir=outdir, cleanup=stage_for_deletion)
 		
+			
 		snps_to_remove, reasons_snps_fail = generate_illumina_snp_stats.illumina_snp_overview(inputFile=pipeline_args['snpTable'], pdf=pdf, clusterSep=pipeline_args['clusterSep'], aatmean=pipeline_args['AATmean'],
 					aatdev=pipeline_args['AATdev'], bbtmean=pipeline_args['BBTmean'], bbtdev=pipeline_args['BBTdev'], aarmean=pipeline_args['AARmean'], abrmean=pipeline_args['ABRmean'],
 					bbrmean=pipeline_args['BBRmean'], callrate=pipeline_args['snp_callrate'], outDir=outdir)
@@ -938,7 +939,7 @@ class Pipeline(BasePipeline):
 					f.write(next(report))
 				true_header = next(report)
 				for line in report:
-					if outdir + '/' + str(line.rstrip().split('\t')[5]) + '.txt' in samples:
+					if outdir + '/' + str(line.rstrip().split('\t')[int(sampleID)]) + '.txt' in samples:
 						f.write(line + '\n')
 					else:
 						f.close()
@@ -954,10 +955,10 @@ class Pipeline(BasePipeline):
 				sample_subset = sample_subset_raw[~sample_subset_raw['SNP Name'].isin(failing_snp_names)]
 				del sample_subset_raw
 				try:
-					final_report_stats.write(str(key.split('/')[-1][:-4]) + '\t' + str(sample_subset['Log R Ratio'].median()) + '\t' + str(sample_subset['Log R Ratio'].mean()) +'\t' +
-						str(sample_subset['Log R Ratio'].std()) + '\t' + str(sample_subset['B Allele Freq'].median()) + '\t' + str(sample_subset['B Allele Freq'].mean()) + '\t' +
-						str(sample_subset['B Allele Freq'].std()) + '\t' + str(sample_subset['Log R Ratio'].max()) +'\t' + str(sample_subset['Log R Ratio'].min()) + '\t' +
-						str(sample_subset['B Allele Freq'].max()) + '\t' + str(sample_subset['B Allele Freq'].min()) +'\n')
+					final_report_stats.write(str(key.split('/')[-1][:-4]) + '\t' + str(sample_subset['Log R Ratio'].median(skipna=True)) + '\t' + str(sample_subset['Log R Ratio'].mean(skipna=True)) +'\t' +
+						str(sample_subset['Log R Ratio'].std(skipna=True)) + '\t' + str(sample_subset['B Allele Freq'].median(skipna=True)) + '\t' + str(sample_subset['B Allele Freq'].mean(skipna=True)) + '\t' +
+						str(sample_subset['B Allele Freq'].std(skipna=True)) + '\t' + str(sample_subset['Log R Ratio'].max(skipna=True)) +'\t' + str(sample_subset['Log R Ratio'].min(skipna=True)) + '\t' +
+						str(sample_subset['B Allele Freq'].max(skipna=True)) + '\t' + str(sample_subset['B Allele Freq'].min(skipna=True)) +'\n')
 					del sample_subset
 				except TypeError:
 					print 'Wrong type at key ' + str(key)
