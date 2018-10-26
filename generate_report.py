@@ -60,7 +60,7 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon,
 	# this is the total number of snps released samples x snps
 	pdf.multi_cell(0, 8, "Total genotypes passing QC: "+str(int(num_samples_qc_pass) * int(num_snps_qc_pass)), 1, 1, 'L')
 	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Average HapMap trio concordance with 1000 Genomes: " +str(concordance)+'%', 1, 1, 'L')
+	pdf.multi_cell(0, 8, "Average HapMap concordance with 1000 Genomes: " +str(concordance)+'%', 1, 1, 'L')
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Percent duplicate concordance: "+str(dupCon['percent_concordance'])+'%', 1, 1, 'L')
 
