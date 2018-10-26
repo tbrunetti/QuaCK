@@ -179,6 +179,101 @@ class Pipeline(BasePipeline):
 		del samples
 		return snps_to_remove, remove_reasons
 
+	
+
+	@staticmethod
+	def concordance(qcPassPLINK, plink, hapmap, tgp, outdir):
+		import pandas
+		import subprocess
+		import re
+		import numpy as np
+
+		stage_for_deletion = []
+		indConc = []
+
+		'''
+		TO DO:
+		
+		make sure qcPassPLINK is not full path or change code to not join paths!!!  Also, should just be plink prefix (no file extension)
+
+		'''
+
+		concordanceResults = open(os.path.join(outdir, 'individal_concordance_reports.txt'), 'w')
+		concordanceResults.write('\t'.join(['HapMap_ID', 'overlapping_snps', 'nonmissing_snps', 'concordant_snps', 'concordance_rate']) + '\n')
+
+		samplesToCheck = open(os.path.join(outdir, 'checkConcordance.txt'), 'w')
+
+
+		hapmaps = pandas.read_table(hapmap, dtype=str) # needs to be tab-delimted! not whitespace due to occurence of "maternal/paternal grand(/mother/father)" in REL
+		hapmapsAvail = list(hapmaps['IID'])
+			
+
+
+		fam_file = pandas.read_table(qcPassPLINK + '.fam', delim_whitespace=True, header=None, names=['FID', 'IID', 'PAT', 'MAT', 'GEN', 'AFF'])
+		for index,row in fam_file.iterrows():
+			if row['IID'].split('_')[-1].upper() in hapmapsAvail:
+				samplesToCheck.write('\t'.join([str(row['FID']), str(row['IID'])]) + '\n')
+		samplesToCheck.flush()
+		samplesToCheck.close()
+
+		with open(samplesToCheck.name, 'r') as individuals:
+			# extract each hapmap control as single individual in plink format
+			for line in individuals:
+				temp = open(os.path.join(outdir, 'temp_conc.txt'), 'w')
+				temp.write(str(line))
+				temp.flush()
+				temp.close()
+				subprocess.call([plink, '--bfile', qcPassPLINK, '--keep', temp.name, '--make-bed', '--out', os.path.join(outdir, line.split('\t')[1].rstrip())])
+
+				# updates fam file to match TGP naming convention so merge can be performed
+				with open(os.path.join(outdir, line.split('\t')[1].rstrip() + '.fam'), 'r') as update:
+					for control in update:
+						tempFile = open(os.path.join(outdir, 'tempFile.txt'), 'w')
+						control = control.split()
+						control[1] = control[1].split('_')[-1].rstrip().upper()
+						control[0] = control[1].rstrip().upper()
+						tempFile.write('\t'.join(control))
+						tempFile.flush()
+						tempFile.close()
+
+				# rename tempFile.txt to .fam file of plink since will not modifiy in-place
+				os.rename(os.path.join(outdir, 'tempFile.txt'), os.path.join(outdir, line.split('\t')[1].rstrip() + '.fam'))
+
+				# run plink merge with TGP
+				subprocess.call([plink, '--bfile', os.path.join(outdir, line.split('\t')[1].rstrip()),
+								'--bmerge', tgp, tgp[:-4] + '.bim', tgp[:-4] + '.fam',
+								'--merge-mode', '7',
+								'--out', os.path.join(outdir, 'indi_concordance_1000genomes')
+								])
+
+				# extract pertanent info from generated log file of concordance 
+				extract_lines = subprocess.Popen(['tail', '-4', os.path.join(outdir, 'indi_concordance_1000genomes.log')], stdout=subprocess.PIPE)
+				get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
+				# regex to sift through the concorance lines from aboveQ
+				overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
+				nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
+				concordant = re.search('([0-9]*)\sconcordant', get_concordance)
+				concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
+				
+				# write results to text file for each hapmap control individual	
+				concordanceResults.write(str(line.split()[1]) + '\t' + str(overlaps.group(1)) + '\t' + 
+					str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str(concordant_rate.group(1)) + '\n')
+
+				indConc.append(round(float(concordant_rate.group(1)) * 100, 2))
+
+				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.bed')
+				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.bim')
+				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.fam')
+				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.hh')
+				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.log')
+
+		concordanceResults.flush()
+		concordanceResults.close()
+
+
+		return stage_for_deletion, np.mean(indConc)
+
+
 	@staticmethod
 	def check_sum(outdir, projectName):
 		with open(outdir + '/' + projectName + '/md5_check_sum.txt', 'a+') as md5sum_files:
@@ -331,7 +426,7 @@ class Pipeline(BasePipeline):
 			update_trio_names.flush() # push out buffer contents
 
 
-			# TESTING TRIO#
+			# TESTING TRIO #
 			trio_rates = open(outdir + '/trio_reports.txt', 'w')
 			header = ['sample_1', 'sample_2', 'sample_3', 'total_overlapping_calls', 'total_nonmissing', 'total_concordant', 'percent_concordance', 'total_mendel_errors_in_family']
 			trio_rates.write('\t'.join(header) + '\n')
@@ -519,9 +614,15 @@ class Pipeline(BasePipeline):
 
 
 		# ----------------------------------------- END OF TRIO CHECKS ----------------------------------------------------
+		# ------------------------------ BEGIN HAPMAP INDIVIDUAL CONCORDANCE CHECKS ---------------------------------------
+
+		tempFiles, avgIndiConc = self.concordance(qcPassPLINK=pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC', plink=pipeline_config['plink']['path'], 
+			hapmap=pipeline_config['hapmap_info']['path'], tgp=pipeline_config['thousand_genomes']['path'], outdir=os.path.join(pipeline_args['outDir'], pipeline_args['projectName']))
+
+		stage_for_deletion.extend(tempFiles)
 
 
-
+		# ---------------------------------- END HAPMAP INDIVIDUAL CONCORDANCE CHECKS -------------------------------------------
 		# ----------------------------------------- BEGIN DUPLICATION CHECKS ----------------------------------------------------
 		all_samples = {}
 		for fid, iid in dict_samples.iteritems():
@@ -845,7 +946,7 @@ class Pipeline(BasePipeline):
 
 
 		pdf_summary_page = FPDF()
-		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=np.mean(average_hap_map_concordance), dupCon=duplicate_concordance, sexCheck=total_discrepancies)
+		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=avgIndiConc, dupCon=duplicate_concordance, sexCheck=total_discrepancies)
 
 		pdf_title.output(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf', 'F')
 		pdf.output(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf', 'F')
