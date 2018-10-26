@@ -261,11 +261,11 @@ class Pipeline(BasePipeline):
 
 				indConc.append(round(float(concordant_rate.group(1)) * 100, 2))
 
-				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.bed')
-				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.bim')
-				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.fam')
-				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.hh')
-				stage_for_deletion.append(line.split('\t')[1].rstrip() + '.log')
+				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.bed'))
+				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.bim'))
+				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.fam'))
+				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.hh'))
+				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.log'))
 
 		concordanceResults.flush()
 		concordanceResults.close()
