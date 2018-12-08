@@ -149,31 +149,31 @@ class Pipeline(BasePipeline):
 		pdf.set_fill_color(200)
 		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs analyzed: " +str(total_snps), 1, 'L', True)
 		pdf.multi_cell(0, 8, "Total samples considered: " +str(total_samples), 1, 'L', True)
-		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs passing call rate threshold:  "+str(total_snps-len(snp_fails)) + '  ' 
+		pdf.multi_cell(0, 8, "Total "+str(chrm)+" SNPs passing the call rate threshold:  "+str(total_snps-len(snp_fails)) + '  ' 
 				+ '('+str("%.2f" % round((float(total_snps-len(snp_fails))/float(total_snps))*100, 2))+'%)', 1, 'L', True)
 		pdf.set_font('Arial', '', 14)
 		pdf.multi_cell(0, 8, "Summary Stats on Original Data:", 1, 1, 'L')
 		pdf.set_x(40)
-		pdf.multi_cell(0, 8, "Median " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.median(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
+		pdf.multi_cell(0, 8, "Median " + str(chrm) + " call rate:  "+ str("%.2f" % round(stats.median(list(1-missingness_snp['F_MISS'].astype(float)))*100, 2))+'%', 1, 1, 'L')
 		pdf.set_x(40)
 		try:
-			pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.mean(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
+			pdf.multi_cell(0, 8, "Mean " + str(chrm) + " call rate:  "+ str("%.2f" % round(stats.mean(list(1-missingness_snp['F_MISS'].astype(float)))*100, 2))+'%', 1, 1, 'L')
 			pdf.set_x(40)
-			pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(stats.stdev(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
+			pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " call rate:  "+ str("%.2f" % round(stats.stdev(list(1-missingness_snp['F_MISS'].astype(float)))*100, 2))+'%', 1, 1, 'L')
 			pdf.set_x(40)
-			pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(min(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
+			pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " call rate:  "+ str("%.2f" % round(min(list(1-missingness_snp['F_MISS'].astype(float)))*100, 2))+'%', 1, 1, 'L')
 			pdf.set_x(40)
-			pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  "+ str("%.2f" % round(max(list(missingness_snp['F_MISS']))*100, 2))+'%', 1, 1, 'L')
+			pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " call rate:  "+ str("%.2f" % round(max(list(1-missingness_snp['F_MISS'].astype(float)))*100, 2))+'%', 1, 1, 'L')
 		
 			pdf.multi_cell(0, 8, '\n', 0, 1, 'L')
 		except AttributeError:
-			pdf.multi_cell(0, 8, "Mean " + str(chrm) + " missing call rate:  NaN", 1, 1, 'L')
+			pdf.multi_cell(0, 8, "Mean " + str(chrm) + " call rate:  NaN", 1, 1, 'L')
                         pdf.set_x(40)
-                        pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " missing call rate:  NaN",1, 1, 'L')
+                        pdf.multi_cell(0, 8, "Standard deviation of " + str(chrm) + " call rate:  NaN",1, 1, 'L')
                         pdf.set_x(40)
-                        pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " missing call rate:  NaN", 1, 1, 'L')
+                        pdf.multi_cell(0, 8, "Minimum " + str(chrm) + " call rate:  NaN", 1, 1, 'L')
                         pdf.set_x(40)
-                        pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " missing call rate:  NaN", 1, 1, 'L')
+                        pdf.multi_cell(0, 8, "Maximum " + str(chrm) + " call rate:  NaN", 1, 1, 'L')
 
 		del missingness_snp
 		del samples
