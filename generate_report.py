@@ -393,14 +393,15 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	# missingness data read data into pandas dataframe
 	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate (%)', 'wellID'])
 	missing_call_dataframe['missing call rate (%)']=missing_call_dataframe['missing call rate (%)'].astype(float)*100
-	missing_genotypes = sns.boxplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, color=".8")
-	missing_genotypes = sns.stripplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
-	plt.suptitle('Overall missing call rate per sample across batches')
+	missing_call_dataframe['call rate (%)'] = (1 - missing_call_dataframe['missing call rate (%)'].astype(float))*100
+	missing_genotypes = sns.boxplot(x='call rate (%)', y='batch', data=micall rate (%)ssing_call_dataframe, color=".8")
+	missing_genotypes = sns.stripplot(x='call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
+	plt.suptitle('Overall call rate per sample across batches')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-	plt.savefig(outDir+'/'+'missing_call_rate_samples.png')
+	plt.savefig(outDir+'/'+'call_rate_samples.png')
 	plt.close()
-	batch_summary.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=140, w=190, h=150)
-	cleanup.append(outDir+'/'+'missing_call_rate_samples.png')  # puts image in line for deletion; happens after final PDF has been generated
+	batch_summary.image(outDir+'/'+'call_rate_samples.png', x=10, y=140, w=190, h=150)
+	cleanup.append(outDir+'/'+'call_rate_samples.png')  # puts image in line for deletion; happens after final PDF has been generated
 	
 
 	# get sample missingness statistics across batches
@@ -408,8 +409,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_call_averages_paired = {}
 	for batch_name in batch_missing:
 		temp = missing_call_dataframe.loc[missing_call_dataframe['batch'].isin([batch_name])]
-		batch_call_averages.append(temp['missing call rate (%)'].mean())
-		batch_call_averages_paired[batch_name] = temp['missing call rate (%)'].mean() 
+		batch_call_averages.append(temp['call rate (%)'].mean())
+		batch_call_averages_paired[batch_name] = temp['call rate (%)'].mean() 
 	
 	# record chip statistics
 	total_chips = 0
@@ -611,24 +612,24 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Sex: ' + str(total_chips_fail), 1, 1, 'L')
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Missingness: ' + str(chip_fails_from_missigness), 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Low Call Rate: ' + str(chip_fails_from_missigness), 1, 1, 'L')
 
 	batch_summary.set_font('Arial', 'B', 16)
 	batch_summary.set_fill_color(200)
-	batch_summary.multi_cell(0, 10, 'Batch Sample Missingness Statistics:  ', 1, 'L', True)
+	batch_summary.multi_cell(0, 10, 'Batch Sample Call Rate Statistics:  ', 1, 'L', True)
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
+	batch_summary.multi_cell(0, 10, "Mean sample call rate across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
 	if len(batch_call_averages) > 1: # std deviation can't be calculated if less than 2 batches exist due to no variance
 		batch_summary.set_x(40)
-		batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
+		batch_summary.multi_cell(0, 10, "Standard Deviation of sample call rate across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
 	else:
 		batch_summary.set_x(40)
-		batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: 0.00", 1, 1, 'L')
+		batch_summary.multi_cell(0, 10, "Standard Deviation of sample call rate across all batches: 0.00", 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(min(batch_call_averages), 4))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with lowest average call rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(min(batch_call_averages), 4))+'%)', 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(max(batch_call_averages), 4))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with highest average call rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(max(batch_call_averages), 4))+'%)', 1, 1, 'L')
 
 
 	return cleanup, failing_chip_IDs, batch_summary
