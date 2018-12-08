@@ -271,7 +271,7 @@ class Pipeline(BasePipeline):
 		concordanceResults.close()
 
 
-		return stage_for_deletion, np.mean(indConc)
+		return stage_for_deletion, round(np.mean(indConc), 2)
 
 
 	@staticmethod
@@ -696,7 +696,7 @@ class Pipeline(BasePipeline):
 			stage_for_deletion.extend([outdir + '/update_trio_names.txt'])
 			
 		else: # there are no duplicates in the data set
-			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str(0.00)+'%'}	
+			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str(0.00)}	
 
 
 		# ----------------------------------------- END OF DUPLICATION CHECKS ----------------------------------------------------
