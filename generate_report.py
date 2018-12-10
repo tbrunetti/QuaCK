@@ -269,7 +269,7 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 
 
 
-def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, cleanup):
+def graph_sexcheck(pdf, warning_samples, sexcheck, maxF, minF, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 	print "checking sex concordance"
@@ -340,7 +340,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 
 	ambiguous_samples = list(set(indeterminate_sex) - set(fixed_sex)) # ambiguous sample IDs only
 
-	with open(reason_samples_fail.name, 'a+') as sex_outliers:
+	with open(warning_samples.name, 'a+') as sex_outliers:
 		for sample in list(set(fixed_sex)-set(unknown_sex)):
 			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['FID'])[0]) + '\t' +str(sample) +'\t' + 
 				'gender_mismatch: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['F'])[0]) +'\n')
