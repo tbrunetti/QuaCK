@@ -626,8 +626,10 @@ class Pipeline(BasePipeline):
 		# ----------------------------------------- BEGIN DUPLICATION CHECKS ----------------------------------------------------
 		all_samples = {}
 		for fid, iid in dict_samples.iteritems():
-			all_samples.setdefault(iid.split('_')[-1], []).extend([fid, iid]) 
-
+			#all_samples.setdefault(iid.split('_')[-1], []).extend([fid, iid]) 
+			get_iid = re.search('WG[0-9]*-DNA_[A-H]{1}[0-9]{1,2}_(.*)', iid)
+			all_samples.setdefault(get_iid.group(1), []).extend([fid, iid])
+		
 		# each item in list contains [fid1, iid1, fid2, iid2] where 1 is the duplicate pair of 2
 		duplicate_pairs = [value for key, value in all_samples.iteritems() if len(value) > 2] # only extracts duplicates
 		
