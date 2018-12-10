@@ -341,16 +341,20 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	ambiguous_samples = list(set(indeterminate_sex) - set(fixed_sex)) # ambiguous sample IDs only
 
 	with open(reason_samples_fail.name, 'a+') as sex_outliers:
-		for sample in fixed_sex:
+		for sample in list(set(fixed_sex)-set(unknown_sex)):
 			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['FID'])[0]) + '\t' +str(sample) +'\t' + 
 				'gender_mismatch: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['F'])[0]) +'\n')
 		for ambiguous in ambiguous_samples :
 			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == ambiguous]['FID'])[0]) + '\t' +str(ambiguous) +'\t' + 
 				'ambiguous_gender: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == ambiguous]['F'])[0]) +'\n')
+		for unknowns in unknown_sex:
+			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == unknowns]['FID'])[0]) + '\t' +str(unknowns) +'\t' + 
+				'missing_gender_in_manifest: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == unknowns]['F'])[0]) +'\n')
+
 
 		sex_outliers.flush()
 
-	return sex_outliers, str(len(fixed_sex)-len(unknown_sex)), str(len(unknown_sex), cleanup
+	return sex_outliers, str(len(fixed_sex)-len(unknown_sex)), str(len(unknown_sex)), cleanup
 
 def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, maxF, minF, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
