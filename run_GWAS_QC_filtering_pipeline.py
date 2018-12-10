@@ -1024,6 +1024,13 @@ class Pipeline(BasePipeline):
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.imiss')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.sexcheck')
 		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.*')
+		stage_for_deletion.append(outdir + '/get_trios.txt')
+		stage_for_deletion.append(outdir + '/header_stuff.txt')
+		stage_for_deletion.append(outdir + '/*.nosex')
+		stage_for_deletion.append(outdir + '/update_trio_names.txt')
+		stage_for_deletion.append(outdir + '/indi_concordance_1000genomes.log')
+		stage_for_deletion.append(outdir + '/indi_concordance_1000genomes.diff')
+		stage_for_deletion.append(outdir + '/temp_conc.txt')
 
 		
 		# actually remove files in stage_for_deletion
