@@ -198,7 +198,7 @@ class Pipeline(BasePipeline):
 
 		'''
 
-		concordanceResults = open(os.path.join(outdir, 'individal_concordance_reports.txt'), 'w')
+		concordanceResults = open(os.path.join(outdir, 'individual_concordance_reports.txt'), 'w')
 		concordanceResults.write('\t'.join(['HapMap_ID', 'overlapping_snps', 'nonmissing_snps', 'concordant_snps', 'concordance_rate']) + '\n')
 
 		samplesToCheck = open(os.path.join(outdir, 'checkConcordance.txt'), 'w')

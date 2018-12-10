@@ -129,8 +129,8 @@ def explanation_of_deliverables(pdf, params):
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, 'Nine text files are provided:', 0, 1, 'J')
 	pdf.set_x(35)
-	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
-		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' +  'trio_reports.txt' + 
+	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_callrate_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
+		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' +  'trio_reports.txt' + 'individual_concordance_reports.txt' +
 		'\n' + 'final_report_statistics_per_sample.txt'+ '\n' + 'md5_check_sum.txt' + '\n\n', 0, 1, 'L') 
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, '     The snps_failing_QC_details.txt is a tab-delimited file that contains all the SNPs that were removed due to failing at least \
@@ -232,7 +232,7 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 	chips_fail_missingness_check = {}
 
 	famfile = pandas.read_table(fam, delim_whitespace=True, names=['FID', 'IID', 'PAT', 'MAT', 'SEX', 'AFF'])
-	reason_samples_fail = open(outDir + '/' + 'samples_failing_QC_details.txt', 'w')
+	reason_samples_fail = open(outDir + '/' + 'samples_failing_callrate_QC_details.txt', 'w')
 	# create a files called "samples_to_remove.txt" to be passed in proper format to plink for sample removal
 	temp_remove = {x:list(famfile.loc[famfile['IID'] == x]['FID']) for x in samples_to_remove}
 	for key in temp_remove:
