@@ -14,7 +14,7 @@ import warnings
 
 # this method will be called last so everything can be calculated
 # then rearrange pages in PDF so this become page 2
-def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon, sexCheck):
+def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon, sexCheck, unspecifiedSex):
 	num_samples_analyzed = sum(1 for line in open(originalFile+'.fam'))
 	num_samples_qc_pass = sum(1 for line in open(cleanedFile+'.fam'))
 	num_snps_analyzed = sum(1 for line in open(originalFile+'.bim'))
@@ -44,6 +44,8 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon,
 	pdf.multi_cell(0, 8, "Total samples passing QC:  "+str(num_samples_qc_pass), 1, 1, 'L')
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Total samples with gender discrepancies:  "+str(sexCheck), 1, 1, 'L')
+	pdf.set_x(30)
+	pdf.multi_cell(0, 8, "Total samples with missing genders in manifest:  "+str(unspecifiedSex), 1, 1, 'L')
 	pdf.multi_cell(0, 8, "\n\n", 0, 1, 'L')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.multi_cell(0, 8, "SNP Summary", 1, 'L', True)
@@ -348,7 +350,7 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 
 		sex_outliers.flush()
 
-	return sex_outliers, str(len(indeterminate_sex)-len(unknown_sex)), cleanup
+	return sex_outliers, str(len(fixed_sex)-len(unknown_sex)), str(len(unknown_sex), cleanup
 
 def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, maxF, minF, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
