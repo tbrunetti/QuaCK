@@ -85,9 +85,9 @@ class Pipeline(BasePipeline):
 	def separate_sexes(plinkFam, outDir):
 		import pandas
 
-		females_and_unknowns = open(outDir+'/females_and_unknowns_by_ped.txt', 'w')
-		males_and_unknowns = open(outDir+'/males_and_unknowns_by_ped.txt', 'w')
-		unknowns_only = open(outDir+'/unknown_by_ped.txt', 'w')
+		females_and_unknowns = open(os.path.join(outDir,'females_and_unknowns_by_ped.txt'), 'w')
+		males_and_unknowns = open(os.path.join(outDir,'males_and_unknowns_by_ped.txt'), 'w')
+		unknowns_only = open(os.path.join(outDir,'unknown_by_ped.txt'), 'w')
 		sample_info = pandas.read_table(plinkFam, delim_whitespace=True)
 		for row in range(0, len(sample_info)):
 			print 
@@ -281,7 +281,7 @@ class Pipeline(BasePipeline):
 				if files == 'md5_check_sum.txt':
 					continue;
 				else:
-					subprocess.call(['md5sum', outdir+'/'+projectName+'/'+str(files)], stdout=md5sum_files)
+					subprocess.call(['md5sum', os.path.join(outdir, projectName, str(files))], stdout=md5sum_files)
 	
 	
 	def run_pipeline(self, pipeline_args, pipeline_config):
@@ -300,11 +300,11 @@ class Pipeline(BasePipeline):
 
 		# specifying output location and conflicting project names of files generated	
 		try:
-			os.stat(pipeline_args['outDir']+'/'+pipeline_args['projectName'])
+			os.stat(os.path.join(pipeline_args['outDir'], pipeline_args['projectName']))
 			sys.exit("project already exists!!")
 		except:
 			print "Making new directory called "+str(pipeline_args['projectName']) + ' located in ' + str(pipeline_args['outDir'])
-			outdir = pipeline_args['outDir']+'/'+pipeline_args['projectName']
+			outdir = os.path.join(pipeline_args['outDir'], pipeline_args['projectName'])
 			os.mkdir(outdir)
 
 
@@ -374,7 +374,7 @@ class Pipeline(BasePipeline):
 		# remove Illumina sample and SNP initial QC (not including call rate):
 		# convert list to temporary file for PLINK
 	
-		snps_to_remove_illumina = open(outdir+'/snps_to_remove_illumina.txt', 'w')
+		snps_to_remove_illumina = open(os.path.join(outdir, 'snps_to_remove_illumina.txt'), 'w')
 		snps_to_remove_illumina.write('\n'.join(snps_to_remove))
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
@@ -384,7 +384,7 @@ class Pipeline(BasePipeline):
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC')
 			)
 
-		stage_for_deletion.append(outdir+'/snps_to_remove_illumina.txt')
+		stage_for_deletion.append(os.path.join(outdir, '/snps_to_remove_illumina.txt'))
 		
 
 		# ----------------------------------------- BEGIN TRIO CHECKS ----------------------------------------------------
@@ -394,8 +394,8 @@ class Pipeline(BasePipeline):
 		dict_samples = dict(zip(fam_file.FID, fam_file.IID))
 
 		# get FID, IID of trio locations:
-		get_trios = open(outdir + '/get_trios.txt', 'w')
-		update_trio_names = open(outdir + '/update_trio_names.txt', 'w')
+		get_trios = open(os.path.join(outdir, 'get_trios.txt'), 'w')
+		update_trio_names = open(os.path.join(outdir,'update_trio_names.txt'), 'w')
 		
 		trios = [(fid, iid, iid.split('_')[-1]) for fid, iid in dict_samples.iteritems() if iid.split('_')[-1][0:2] == 'NA']
 		
@@ -427,14 +427,14 @@ class Pipeline(BasePipeline):
 
 
 			# TESTING TRIO #
-			trio_rates = open(outdir + '/trio_reports.txt', 'w')
+			trio_rates = open(os.path.join(outdir, 'trio_reports.txt'), 'w')
 			header = ['sample_1', 'sample_2', 'sample_3', 'total_overlapping_calls', 'total_nonmissing', 'total_concordant', 'percent_concordance', 'total_mendel_errors_in_family']
 			trio_rates.write('\t'.join(header) + '\n')
 
 
 			for key,value in trios_run_together.iteritems():
-				temp_trio_file_extract = open(outdir + '/temp_trio_file_extract.txt', 'w')
-				temp_trio_file_update = open(outdir + '/temp_trio_file_update.txt', 'w')
+				temp_trio_file_extract = open(os.path.join(outdir, 'temp_trio_file_extract.txt'), 'w')
+				temp_trio_file_update = open(os.path.join(outdir, 'temp_trio_file_update.txt'), 'w')
 				if len(value) == 3 or len(value) ==2:
 					values = trios_run_together_update.get(key)
 					for trio in value:
@@ -468,10 +468,10 @@ class Pipeline(BasePipeline):
 						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp_updated'),
 						Parameter('--bmerge', pipeline_config['thousand_genomes']['path'][:-4]),
 						Parameter('--merge-mode', '7'),
-						Parameter('--out', outdir + '/trio_concordance_1000genomes')
+						Parameter('--out', os.path.join(outdir, 'trio_concordance_1000genomes'))
 						)
 
-					extract_lines = subprocess.Popen(['tail', '-4', outdir + '/trio_concordance_1000genomes.log'], stdout=subprocess.PIPE)
+					extract_lines = subprocess.Popen(['tail', '-4', os.path.join(outdir, 'trio_concordance_1000genomes.log')], stdout=subprocess.PIPE)
 					get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
 					# regex to sift through the concorance lines from above
 					overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
@@ -493,8 +493,8 @@ class Pipeline(BasePipeline):
 					
 					average_hap_map_concordance.append(round(float(concordant_rate.group(1))*100, 2))
 
-					update_child = open(outdir + '/update_child.txt', 'w')
-					update_sex = open(outdir + '/update_sex.txt', 'w')
+					update_child = open(os.path.join(outdir, 'update_child.txt'), 'w')
+					update_sex = open(os.path.join(outdir, '/update_sex.txt'), 'w')
 					kinship = {}
 					hapmap_genders = {}
 					update_info = trios_run_together_update.get(key, 'DNE')
@@ -526,7 +526,7 @@ class Pipeline(BasePipeline):
 						update_sex.flush()
 
 
-					mendel_renames = open(outdir + '/mendel_renames.txt', 'w')
+					mendel_renames = open(os.path.join(outdir, 'mendel_renames.txt'), 'w')
 					for each_hapmap in updated_FID:
 						mendel_renames.write('\t'.join(each_hapmap) + '\n')
 					mendel_renames.flush()
@@ -561,11 +561,11 @@ class Pipeline(BasePipeline):
 						plink_general.run(
 							Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child'),
 							Parameter('--mendel'),
-							Parameter('--out', outdir + '/mendel_errors_'+str(key))
+							Parameter('--out', os.path.join(outdir, 'mendel_errors_'+str(key)))
 							)
 
 						try:
-							with open(outdir + '/mendel_errors_'+str(key)+'.fmendel') as errors:
+							with open(os.path.join(outdir, 'mendel_errors_'+str(key)+'.fmendel'), 'r') as errors:
 								header = next(errors)
 								for line in errors:
 									line = line.rstrip().split()
@@ -581,10 +581,10 @@ class Pipeline(BasePipeline):
 							Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated_sex_child'),
 							Parameter('--mendel'),
 							Parameter('--mendel-duos'),
-							Parameter('--out', outdir + '/mendel_errors_'+str(key))
+							Parameter('--out', os.path.join(outdir, 'mendel_errors_'+str(key)))
 							)
 						try:
-							with open(outdir + '/mendel_errors_'+str(key)+'.fmendel') as errors:
+							with open(os.path.join(outdir, 'mendel_errors_'+str(key)+'.fmendel'), 'r') as errors:
 								header = next(errors)
 								for line in errors:
 									line = line.rstrip().split()
@@ -606,10 +606,10 @@ class Pipeline(BasePipeline):
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bed',
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.bim', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.fam', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.log',
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios.nosex', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.log',
-								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.nosex', outdir + '/mendel_errors_'+str(key)+'.imendel', outdir + '/mendel_errors_'+str(key)+'.lmendel', 
-								outdir + '/mendel_errors_'+str(key)+'.fmendel', outdir + '/mendel_errors_'+str(key)+'.hh', outdir + '/update_child.txt', 
-								outdir +'/update_sex.txt', outdir +'/trio_concordance_1000genomes.diff', outdir + '/temp_trio_file_extract.txt',
-								outdir + '/temp_trio_file_update.txt'])
+								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.nosex', os.path.join(outdir, 'mendel_errors_'+str(key)+'.imendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.lmendel'), 
+								os.path.join(outdir, 'mendel_errors_'+str(key)+'.fmendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.hh'), os.path.join(outdir, 'update_child.txt'), 
+								os.path.join(outdir, 'update_sex.txt'), os.path.join(outdir,'trio_concordance_1000genomes.diff'), os.path.join(outdir, 'temp_trio_file_extract.txt'),
+								os.path.join(outdir, 'temp_trio_file_update.txt')])
 			
 
 
@@ -635,9 +635,9 @@ class Pipeline(BasePipeline):
 		
 		if len(duplicate_pairs) > 0: # confirms there are duplicates in the data set
 			
-			extract_dups_1 = open(outdir + '/duplicates1.txt', 'w') # format is FID IID, this will be file to input into PLINK to extact duplicates
-			extract_dups_2 = open(outdir + '/duplicates2.txt', 'w') # format is FID IID, this will be file to input into PLINK to extact duplicates
-			change_names = open(outdir + '/duplicate_name_updates.txt', 'w') # change names to match, required in order to get concordance calc
+			extract_dups_1 = open(os.path.join(outdir, 'duplicates1.txt'), 'w') # format is FID IID, this will be file to input into PLINK to extact duplicates
+			extract_dups_2 = open(os.path.join(outdir, 'duplicates2.txt'), 'w') # format is FID IID, this will be file to input into PLINK to extact duplicates
+			change_names = open(os.path.join(outdir, 'duplicate_name_updates.txt'), 'w') # change names to match, required in order to get concordance calc
 			
 			for samples in duplicate_pairs:
 				extract_dups_1.write(str(samples[0]) + '\t' + str(samples[1]) + '\n') # input format for PLINK
@@ -677,11 +677,11 @@ class Pipeline(BasePipeline):
 				Parameter('--bfile', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated'),
 				Parameter('--bmerge', pipeline_args['inputPLINK'][:-4] + '_dup1'),
 				Parameter('--merge-mode', '7'),
-				Parameter('--out', outdir + '/duplicate_concordance')
+				Parameter('--out', os.path.join(outdir, 'duplicate_concordance'))
 				)
 
 
-			extract_lines = subprocess.Popen(['tail', '-4', outdir + '/duplicate_concordance.log'], stdout=subprocess.PIPE)
+			extract_lines = subprocess.Popen(['tail', '-4', os.path.join(outdir, 'duplicate_concordance.log')], stdout=subprocess.PIPE)
 			get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
 			# regex to sift through the concorance lines from above
 			overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
@@ -698,7 +698,7 @@ class Pipeline(BasePipeline):
 			stage_for_deletion.extend([outdir + '/update_trio_names.txt'])
 			
 		else: # there are no duplicates in the data set
-			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':str(0.00)}	
+			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':'No duplicates: '+str(0.00)}	
 
 
 		# ----------------------------------------- END OF DUPLICATION CHECKS ----------------------------------------------------
@@ -719,7 +719,7 @@ class Pipeline(BasePipeline):
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', 'X'),
-			Parameter('--remove', outdir+'/unknown_by_ped.txt'),
+			Parameter('--remove', os.path.join(outdir, 'unknown_by_ped.txt')),
 			Parameter('--make-bed'),
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_X_snps_males_and_females')
 			)
@@ -727,7 +727,7 @@ class Pipeline(BasePipeline):
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', 'Y'),
-			Parameter('--remove', outdir+'/females_and_unknowns_by_ped.txt'),
+			Parameter('--remove', os.path.join(outdir, 'females_and_unknowns_by_ped.txt')),
 			Parameter('--make-bed'),
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_Y_snps_males_only')
 			)
@@ -735,7 +735,7 @@ class Pipeline(BasePipeline):
 		plink_general.run(
 			Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC'),
 			Parameter('--chr', 'MT'),
-			Parameter('--remove', outdir+'/unknown_by_ped.txt'),
+			Parameter('--remove', os.path.join(outdir, 'unknown_by_ped.txt')),
 			Parameter('--make-bed'),
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_MT_snps_unknowns_removed')
 			)
@@ -840,7 +840,7 @@ class Pipeline(BasePipeline):
 
 		# remove all SNPs from file not passing Illumina QC and not passing call rate QC
 		unique_snps_to_remove = set(snps_to_remove)
-		all_snps_removed = open(outdir+'/all_snps_removed.txt', 'w')
+		all_snps_removed = open(os.path.join(outdir, 'all_snps_removed.txt'), 'w')
 		all_snps_removed.write('\n'.join(unique_snps_to_remove))
 		all_snps_removed.flush()
 		plink_general.run(
@@ -851,7 +851,7 @@ class Pipeline(BasePipeline):
 			)
 
 
-		snps_failing_QC_details = open(outdir + '/snps_failing_QC_details.txt', 'w')
+		snps_failing_QC_details = open(os.path.join(outdir, 'snps_failing_QC_details.txt'), 'w')
 		for key, value in reasons_snps_fail.iteritems():
 			snps_failing_QC_details.write(str(key)+'\t'+'\t'.join(value)+'\n')
 		snps_failing_QC_details.flush()
@@ -884,7 +884,7 @@ class Pipeline(BasePipeline):
 
 		overall_sex_pdf = FPDF()
 		# not imbedded in Illumina Sample check because uses own input files
-		warning_samples = open(outdir+"/samples_with_warnings.txt", 'w')
+		warning_samples = open(os.path.join(outdir, "samples_with_warnings.txt"), 'w')
 		warning_samples, total_discrepancies, unspecified_sex, stage_for_deletion = generate_report.graph_sexcheck(pdf=overall_sex_pdf, warning_samples=warning_samples, sexcheck=pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck', maxF=pipeline_args['maxFemale'], minF=pipeline_args['minMale'], outDir=outdir, cleanup=stage_for_deletion)
 		
 		pdf_internal_batch = FPDF()
@@ -951,17 +951,38 @@ class Pipeline(BasePipeline):
 		pdf_summary_page = FPDF()
 		generate_report.overall_main_page_stats(pdf=pdf_summary_page, originalFile=pipeline_args['inputPLINK'][:-4], cleanedFile=pipeline_args['inputPLINK'][:-4]+'_passing_QC', concordance=avgIndiConc, dupCon=duplicate_concordance, sexCheck=total_discrepancies, unspecifiedSex=unspecified_sex)
 
-		pdf_title.output(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf', 'F')
-		pdf.output(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf', 'F')
-		pdf_summary_page.output(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf', 'F')
-		pdf_thresh.output(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf', 'F')
-		pdf_internal_batch.output(outdir +'/'+pipeline_args['projectName']+'_internal_batch.pdf', 'F')
-		callrate_pdf.output(outdir +'/'+pipeline_args['projectName']+'_non_auto_callrates.pdf', 'F')
-		overall_sex_pdf.output(outdir +'/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf', 'F')
-		batch_summary.output(outdir + '/' +pipeline_args['projectName']+'_batch_summary.pdf', 'F')
-		pdf_internal_cover_page.output(outdir + '/' + pipeline_args['projectName']+'_internal_cover.pdf', 'F')
-		pdf_detailed_cover.output(outdir + '/' + pipeline_args['projectName']+'_detailed_cover.pdf', 'F')
-		pdf_glossary_cover.output(outdir + '/' + pipeline_args['projectName']+'_glossary_cover.pdf', 'F')
+		pdf_title.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_cover_page.pdf'),'F')
+
+		pdf.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_bulk_data.pdf'), 'F')
+		
+		pdf_summary_page.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_summary_page.pdf'), 'F')
+		
+		pdf_thresh.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_thresholds.pdf'), 'F')
+		
+		pdf_internal_batch.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_internal_batch.pdf'), 'F')
+		
+		callrate_pdf.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_non_auto_callrates.pdf'), 'F')
+		
+		overall_sex_pdf.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_overall_sex_concordance.pdf'), 'F')
+		
+		batch_summary.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_batch_summary.pdf'), 'F')
+		
+		pdf_internal_cover_page.output(
+			os.path.join(outdir,pipeline_args['projectName']+'_internal_cover.pdf'), 'F')
+		
+		pdf_detailed_cover.output(
+			os.path.join(outdir, pipeline_args['projectName']+'_detailed_cover.pdf'), 'F')
+		
+		pdf_glossary_cover.output(
+			os.path.join(outdir + '/' + pipeline_args['projectName']+'_glossary_cover.pdf'), 'F')
 
 		# create PDF merge objects and write final PDF as project name with '_final_*.pdf' as suffix
 		pdf_merger_summary = PyPDF2.PdfFileMerger()
@@ -970,27 +991,27 @@ class Pipeline(BasePipeline):
 		pdf_merger_internal = PyPDF2.PdfFileMerger()
 		
 		# assign pages to approriate PDF merger object in order of page output
-		pdf_merger_summary.append(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf')
-		pdf_merger_summary.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
-		pdf_merger_detailed.append(outdir + '/' + pipeline_args['projectName']+'_detailed_cover.pdf')
-		pdf_merger_detailed.append(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf')
-		pdf_merger_detailed.append(outdir +'/'+pipeline_args['projectName']+'_non_auto_callrates.pdf')
-		pdf_merger_detailed.append(outdir + '/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf')
-		pdf_merger_glossary.append(outdir + '/' + pipeline_args['projectName']+'_glossary_cover.pdf')
-		pdf_merger_glossary.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
+		pdf_merger_summary.append(os.path.join(outdir, pipeline_args['projectName']+'_cover_page.pdf'))
+		pdf_merger_summary.append(os.path.join(outdir, pipeline_args['projectName']+'_summary_page.pdf'))
+		pdf_merger_detailed.append(os.path.join(outdir, pipeline_args['projectName']+'_detailed_cover.pdf'))
+		pdf_merger_detailed.append(os.path.join(outdir, pipeline_args['projectName']+'_bulk_data.pdf'))
+		pdf_merger_detailed.append(os.path.join(outdir, pipeline_args['projectName']+'_non_auto_callrates.pdf'))
+		pdf_merger_detailed.append(os.path.join(outdir, pipeline_args['projectName']+'_overall_sex_concordance.pdf'))
+		pdf_merger_glossary.append(os.path.join(outdir, pipeline_args['projectName']+'_glossary_cover.pdf'))
+		pdf_merger_glossary.append(os.path.join(outdir, pipeline_args['projectName']+'_thresholds.pdf'))
 		pdf_merger_glossary.append('Parameter_Definitions.pdf')
 		pdf_merger_glossary.append('pre-QC-initialization-workflow.pdf')
 		pdf_merger_glossary.append('QC-pipeline-workflow.pdf')
-		pdf_merger_internal.append(outdir + '/' + pipeline_args['projectName']+'_internal_cover.pdf')
-		pdf_merger_internal.append(outdir + '/'+ pipeline_args['projectName']+'_batch_summary.pdf')
-		pdf_merger_internal.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf' )
+		pdf_merger_internal.append(os.path.join(outdir, pipeline_args['projectName']+'_internal_cover.pdf'))
+		pdf_merger_internal.append(os.path.join(outdir, pipeline_args['projectName']+'_batch_summary.pdf'))
+		pdf_merger_internal.append(os.path.join(outdir, pipeline_args['projectName']+'_internal_batch.pdf'))
 		
 
 		# write out final reports to approriate PDF files
-		pdf_merger_summary.write(outdir + '/'+pipeline_args['projectName']+'_final_summary_report.pdf')
-		pdf_merger_detailed.write(outdir + '/'+pipeline_args['projectName']+'_final_detailed_report.pdf')
-		pdf_merger_glossary.write(outdir + '/'+pipeline_args['projectName']+'_final_glossary_report.pdf')
-		pdf_merger_internal.write(outdir + '/'+pipeline_args['projectName']+'_final_internal_report.pdf')
+		pdf_merger_summary.write(os.path.join(outdir, pipeline_args['projectName']+'_final_summary_report.pdf'))
+		pdf_merger_detailed.write(os.path.join(outdir, pipeline_args['projectName']+'_final_detailed_report.pdf'))
+		pdf_merger_glossary.write(os.path.join(outdir, pipeline_args['projectName']+'_final_glossary_report.pdf'))
+		pdf_merger_internal.write(os.path.join(outdir, pipeline_args['projectName']+'_final_internal_report.pdf'))
 
 		# close pdf merger objects
 		pdf_merger_summary.close()
@@ -998,54 +1019,16 @@ class Pipeline(BasePipeline):
 		pdf_merger_glossary.close()
 		pdf_merger_internal.close()
 
-		
-		# remove extraneous intermediate files
-		stage_for_deletion.append(outdir + '/samples_to_remove.txt')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_cover_page.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_bulk_data.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_summary_page.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_thresholds.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_internal_batch.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_non_auto_callrates.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_overall_sex_concordance.pdf')
-		stage_for_deletion.append(outdir + '/'+pipeline_args['projectName']+'_batch_summary.pdf')
-		stage_for_deletion.append(outdir + '/' + pipeline_args['projectName']+'_internal_cover.pdf')
-		stage_for_deletion.append(outdir + '/' + pipeline_args['projectName']+'_detailed_cover.pdf')
-		stage_for_deletion.append(outdir + '/' + pipeline_args['projectName']+'_glossary_cover.pdf')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.bed')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.bim')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.fam')
-		stage_for_deletion.append(outdir + '/unknown_by_ped.txt')
-		stage_for_deletion.append(outdir + '/females_and_unknowns_by_ped.txt')
-		stage_for_deletion.append(outdir + '/males_and_unknowns_by_ped.txt')
-		stage_for_deletion.append(outdir + '/all_snps_removed.txt')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.hh')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.lmiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.imiss')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'*.sexcheck')
-		stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC.*')
-		stage_for_deletion.append(outdir + '/get_trios.txt')
-		stage_for_deletion.append(outdir + '/header_stuff.txt')
-		stage_for_deletion.append(outdir + '/*.nosex')
-		stage_for_deletion.append(outdir + '/update_trio_names.txt')
-		stage_for_deletion.append(outdir + '/indi_concordance_1000genomes.log')
-		stage_for_deletion.append(outdir + '/indi_concordance_1000genomes.diff')
-		stage_for_deletion.append(outdir + '/temp_conc.txt')
 
-		
-		# actually remove files in stage_for_deletion
-		print '\n\n' + "Cleaning up project directory"
-		for files in stage_for_deletion:
-			subprocess.call(['rm', '-rf', files])
 		
 		
 		if pipeline_args['finalReport'] != None:
-			final_report_stats = open(outdir + '/final_report_statistics_per_sample.txt', 'w')
+			final_report_stats = open(os.path.join(outdir, 'final_report_statistics_per_sample.txt'), 'w')
 			final_report_stats.write('\t'.join(['Sample_ID', 'median_LLR', 'mean_LRR', 'std_LRR', 'median_BAF', 'mean_BAF', 'std_BAF', 'max_LLR', 'min_LLR', 'max_BAF', 'min_BAF']) + '\n')
 			samples = {}
 			path, header, sampleID = pipeline_args['finalReport'].split(',')
 			with open(path, 'r') as report:
-				f = open(outdir + '/header_stuff.txt', 'w')
+				f = open(os.path.join(outdir, 'header_stuff.txt'), 'w')
 				for _ in xrange(int(header)):
 					f.write(next(report))
 				true_header = next(report)
@@ -1088,5 +1071,33 @@ class Pipeline(BasePipeline):
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_QC')
 			)
 	
+
+
+		# remove extraneous intermediate files
+
+		deletion_in_projDir = [pipeline_args['projectName']+'_cover_page.pdf', pipeline_args['projectName']+'_bulk_data.pdf', pipeline_args['projectName']+'_summary_page.pdf', 
+			pipeline_args['projectName']+'_thresholds.pdf', pipeline_args['projectName']+'_internal_batch.pdf', pipeline_args['projectName']+'_non_auto_callrates.pdf', 
+			pipeline_args['projectName']+'_overall_sex_concordance.pdf', pipeline_args['projectName']+'_batch_summary.pdf', pipeline_args['projectName']+'_internal_cover.pdf', 
+			pipeline_args['projectName']+'_detailed_cover.pdf', pipeline_args['projectName']+'_glossary_cover.pdf', 'samples_to_remove.txt', 'unknown_by_ped.txt', 'females_and_unknowns_by_ped.txt',
+			'males_and_unknowns_by_ped.txt', 'all_snps_removed.txt', 'get_trios.txt', 'header_stuff.txt', '*.nosex', 'update_trio_names.txt', 'indi_concordance_1000genomes.log', 'indi_concordance_1000genomes.diff',
+			'temp_conc.txt', 'checkConcordance.txt']
+		
+		for files in deletion_in_projDir:
+			stage_for_deletion.append(os.path.join(outdir, +str(files)))
+
+		
+		deletion_in_plinkDir = ['_passing_Illumina_sample_SNP_QC.bed', '_passing_Illumina_sample_SNP_QC.bim', '_passing_Illumina_sample_SNP_QC.fam', '*.hh', '.*lmiss', '*.imiss', '*.sexcheck',
+			'_passing_Illumina_sample_SNP_QC.*']
+
+		for files in deletion_in_plinkDir:
+			stage_for_deletion.append(pipeline_args['inputPLINK'][:-4]+str(files))
+
+		
+		# actually remove files in stage_for_deletion
+		print '\n\n' + "Cleaning up project directory"
+		for files in stage_for_deletion:
+			subprocess.call(['rm', '-rf', files])
+
+		
 
 		self.check_sum(outdir=pipeline_args['outDir'], projectName=pipeline_args['projectName'])
