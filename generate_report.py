@@ -271,6 +271,16 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 
 
 def graph_sexcheck(pdf, warning_samples, sexcheck, maxF, minF, outDir, cleanup):
+	'''
+	pdf: a FPDF object (separate instance of FPDF object in function batch_effects())
+	warning_samples: a new open() file object to write samples with gender discrepanices
+	sexcheck: pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck
+	maxF: pipeline_args['maxFemale']; float
+	minF: pipeline_args['minMale']; float
+	outDir: output directory
+	cleanup: a list that contains paths to files that can be removed
+	'''
+
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 	print "checking sex concordance"
@@ -358,6 +368,18 @@ def graph_sexcheck(pdf, warning_samples, sexcheck, maxF, minF, outDir, cleanup):
 	return sex_outliers, str(len(fixed_sex)-len(unknown_sex)), str(len(unknown_sex)), cleanup
 
 def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, maxF, minF, outDir, cleanup):
+	'''
+	pdf: a FPDF object (separate instance of FPDF object in function graph_sexcheck())
+	chipFail: pipeline_args['chipFailure']; integer of max number of failures to consider chip a fail
+	sexcheck: pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck
+	missingness: pipeline_args['inputPLINK'][:-4]+'_passing_QC.imiss
+	chip_missingness_fails: text file of FID and IID of samples to removed
+	maxF: pipeline_args['maxFemale']; float
+	minF: pipeline_args['minMale']; float
+	outDir: output directory
+	cleanup: a list that contains paths to files that can be removed
+	'''
+
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 	batch_summary = FPDF()
@@ -444,7 +466,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		plt.suptitle('Sex and F coefficient based on pedigree sex data')
 		sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-		plt.savefig(os.path.join(outDir, 'sample_sex'+str(key)+'.png',) bbox_inches='tight')
+		plt.savefig(os.path.join(outDir, 'sample_sex'+str(key)+'.png'), bbox_inches='tight')
 		plt.close()
 		pdf.image(os.path.join(outDir, "sample_sex"+str(key)+'.png'), x=20, y=85, w=79, h=85)
 		cleanup.append(os.path.join(outDir, "sample_sex"+str(key)+'.png'))  # puts image in line for deletion; happens after final PDF has been generated
