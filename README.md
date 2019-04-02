@@ -1,5 +1,5 @@
 # QuaCK 
-# **Qua**lity **C*ontrol **K**iosk
+**Qua**lity **C**ontrol **K**iosk
 
 ## V0.2.0 Release Notes
 ------------------------
