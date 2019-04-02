@@ -1083,7 +1083,7 @@ class Pipeline(BasePipeline):
 			'temp_conc.txt', 'checkConcordance.txt']
 		
 		for files in deletion_in_projDir:
-			stage_for_deletion.append(os.path.join(outdir, +str(files)))
+			stage_for_deletion.append(os.path.join(outdir, str(files)))
 
 		
 		deletion_in_plinkDir = ['_passing_Illumina_sample_SNP_QC.bed', '_passing_Illumina_sample_SNP_QC.bim', '_passing_Illumina_sample_SNP_QC.fam', '*.hh', '.*lmiss', '*.imiss', '*.sexcheck',
