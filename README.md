@@ -1,5 +1,15 @@
 # GWAS_QC_pipeline
 
+## V0.2.0 Release Notes
+------------------------
+What's updated in V0.1.1?  
+* more granularity in sex check bins reported. There are now 3 categories:  gender mixmatch, gender amiguous, and gender missing in manifest  
+* rename call rate statistics in detailed report and internal report to be based on call rate instead of missing call rates  
+* fixed bug with duplicate concordance name to now match on regex instead of underscore splits  
+* new file output called samples_with_warnings.txt to delinieate samples that fail call rate (samples_failing_callrate_QC_details.txt) versus those with sex check issuses (samples_with_warnings.txt).  The warnings are not removed from the cleaned data set  
+* more thorough clean up of temporary files in project share  
+* code has been updated to be more mindful to be a little less error-prone in terms of reading in arugments such as joining paths rather than concatenating paths
+
 ## Table of Contents
 --------------------
 1. [Overview and Purpose](#overview-and-purpose)
