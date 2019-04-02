@@ -1,8 +1,10 @@
-# GWAS_QC_pipeline
+# QuaCK 
+# **Qua**lity **C*ontrol **K**iosk
 
 ## V0.2.0 Release Notes
 ------------------------
-What's updated in V0.1.1?  
+What was updated in V0.2.0?  
+* updated name from GWAS_QC_Pipeline to QuaCK
 * more granularity in sex check bins reported. There are now 3 categories:  gender mixmatch, gender amiguous, and gender missing in manifest  
 * rename call rate statistics in detailed report and internal report to be based on call rate instead of missing call rates  
 * fixed bug with duplicate concordance name to now match on regex instead of underscore splits  
@@ -16,6 +18,7 @@ What's updated in V0.1.1?
 * TO DO: internal report also gives specifics on chip failures due to poor call rate threholds  
 * TO DO: duplicate concordance is now printed as a text file for every pairwise duplicate checked in addition to the average on the summary PDF  
 * TO DO: better organization of a deliverable product  
+* TO DO: argument added to now exclude a list of snps before proceeding with full analysis (updates new callrate in SampleTable.txt)
 
 ## Table of Contents
 --------------------
