@@ -299,27 +299,31 @@ class Pipeline(BasePipeline):
 								])
 
 				# extract pertanent info from generated log file of concordance 
-				extract_lines = subprocess.Popen(['tail', '-4', os.path.join(outdir, 'indi_concordance_1000genomes.log')], stdout=subprocess.PIPE)
-				get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
-				# regex to sift through the concorance lines from aboveQ
-				overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
-				nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
-				concordant = re.search('([0-9]*)\sconcordant', get_concordance)
-				concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
+				try:
+					extract_lines = subprocess.Popen(['tail', '-4', os.path.join(outdir, 'indi_concordance_1000genomes.log')], stdout=subprocess.PIPE)
+					get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
+					# regex to sift through the concorance lines from aboveQ
+					overlaps = re.search('([0-9]*)\soverlapping\scalls', get_concordance)
+					nonmissing = re.search('([0-9]*)\snonmissing', get_concordance)
+					concordant = re.search('([0-9]*)\sconcordant', get_concordance)
+					concordant_rate = re.search('for\sa\sconcordance\srate\sof\s(0\.[0-9]*)', get_concordance)
 				
-				# write results to text file for each hapmap control individual	
-				concordanceResults.write(str(line.split()[1]) + '\t' + str(overlaps.group(1)) + '\t' + 
-					str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str(concordant_rate.group(1)) + '\n')
+					# write results to text file for each hapmap control individual	
+					concordanceResults.write(str(line.split()[1]) + '\t' + str(overlaps.group(1)) + '\t' + 
+						str(nonmissing.group(1)) + '\t' + str(concordant.group(1)) + '\t' + str(concordant_rate.group(1)) + '\n')
 
-				indConc.append(round(float(concordant_rate.group(1)) * 100, 2))
+					indConc.append(round(float(concordant_rate.group(1)) * 100, 2))
 
-				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.bed'))
-				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.bim'))
-				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.fam'))
-				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.hh'))
-				stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.log'))
+					stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.bed'))
+					stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.bim'))
+					stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.fam'))
+					stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.hh'))
+					stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.log'))
+				except AttributeError:
+					concordanceResults.write(str(line.split()[1]) + '\t' + "ID NOT FOUND IN TGP CONCORDANCE DATA SET" + '\n')
 
-		concordanceResults.flush()
+
+		concordanceResults.flush() 
 		concordanceResults.close()
 
 
