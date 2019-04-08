@@ -1,4 +1,5 @@
 from fpdf import FPDF
+import sys
 import os
 import re
 import pandas
@@ -283,7 +284,7 @@ def graph_sexcheck(pdf, warning_samples, sexcheck, maxF, minF, outDir, cleanup):
 
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
-	print "checking sex concordance"
+	print("checking sex concordance")
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 24)
 	pdf.set_margins(20, 10, 20)
@@ -422,6 +423,7 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	# missingness data read data into pandas dataframe
 	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate (%)', 'wellID'])
 	missing_call_dataframe['missing call rate (%)']=missing_call_dataframe['missing call rate (%)'].astype(float)*100
+	missing_call_dataframe.dropna(axis=0, how="any", subset=['missing call rate (%)'], inplace=True)
 	missing_call_dataframe['call rate (%)'] = (1 - missing_call_dataframe['missing call rate (%)'].astype(float))*100
 	missing_genotypes = sns.boxplot(x='call rate (%)', y='batch', data=missing_call_dataframe, color=".8")
 	missing_genotypes = sns.stripplot(x='call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
