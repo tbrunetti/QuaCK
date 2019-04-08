@@ -179,7 +179,57 @@ class Pipeline(BasePipeline):
 		del samples
 		return snps_to_remove, remove_reasons
 
-	
+	@staticmethod
+	def concordance_flips(plink, checkPlink, tgp, outdir):
+		
+		print("Checking for strand flips and triallelic snps for TGP concordance...")
+		
+		def merge_check(TGP, outdir):
+			subprocess.call([plink, '--bfile', checkPlink,
+							'--bmerge', TGP, TGP[:-4] + '.bim', TGP[:-4] + '.fam',
+							'--merge-mode', '7',
+							'--out', os.path.join(outdir, 'trio_concordance_1000genomes')
+							])
+		
+		flips_vs_removals = 0
+		merge_check(TGP=tgp, outdir=outdir)
+		
+		
+		if os.path.exists(os.path.join(outdir, 'trio_concordance_1000genomes.missnp')) and flips_vs_removals==0:
+			print("Strand flip problems found...flipping...")
+
+			subprocess.call([plink, '--bfile', tgp[:-4],
+							'--flip', os.path.join(outdir, 'trio_concordance_1000genomes.missnp'),
+							'--make-bed',
+							'--out', os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped')
+							])
+
+			os.remove(os.path.join(outdir, 'trio_concordance_1000genomes.missnp'))
+			flips_vs_removals += 1
+			merge_check(TGP=os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped.bed'), outdir=outdir)
+		
+			if os.path.exists(os.path.join(outdir, 'trio_concordance_1000genomes.missnp')) and flips_vs_removals==1:
+				print("Trialleic snps found...removing...")
+
+				subprocess.call([plink, '--bfile', os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped'),
+								'--exclude', os.path.join(outdir, 'trio_concordance_1000genomes.missnp'),
+								'--make-bed',
+								'--out', os.path.join(outdir, os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed'))
+								])
+
+				os.remove(os.path.join(outdir, 'trio_concordance_1000genomes.missnp'))
+				flips_vs_removals += 1
+
+				merge_check(TGP=os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed.bed'), outdir=outdir)
+
+				return os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed.bed')
+			else:
+				return os.path.join(outdir, tgp.split('/')[-1][-4] + '_flipped.bed')
+
+		else:
+			return tgp
+
+
 
 	@staticmethod
 	def concordance(qcPassPLINK, plink, hapmap, tgp, outdir):
@@ -238,6 +288,8 @@ class Pipeline(BasePipeline):
 
 				# rename tempFile.txt to .fam file of plink since will not modifiy in-place
 				os.rename(os.path.join(outdir, 'tempFile.txt'), os.path.join(outdir, line.split('\t')[1].rstrip() + '.fam'))
+
+				
 
 				# run plink merge with TGP
 				subprocess.call([plink, '--bfile', os.path.join(outdir, line.split('\t')[1].rstrip()),
@@ -384,7 +436,7 @@ class Pipeline(BasePipeline):
 			Parameter('--out', pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC')
 			)
 
-		stage_for_deletion.append(os.path.join(outdir, '/snps_to_remove_illumina.txt'))
+		stage_for_deletion.append(os.path.join(outdir, 'snps_to_remove_illumina.txt'))
 		
 
 		# ----------------------------------------- BEGIN TRIO CHECKS ----------------------------------------------------
@@ -464,12 +516,8 @@ class Pipeline(BasePipeline):
 
 					# trio concordance check against 1000 genomes
 					# Need to extract just NA followed by number part of trios and rename FID and IID with the NA ID (ONLY TO CHECK FOR 1000 GENOMES CONCORDANCE)
-					plink_general.run(
-						Parameter('--bfile', pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp_updated'),
-						Parameter('--bmerge', pipeline_config['thousand_genomes']['path'][:-4]),
-						Parameter('--merge-mode', '7'),
-						Parameter('--out', os.path.join(outdir, 'trio_concordance_1000genomes'))
-						)
+					newTGPconfig = self.concordance_flips(plink=pipeline_config['plink']['path'], tgp=pipeline_config['thousand_genomes']['path'], checkPlink=pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp_updated', outdir=os.path.join(pipeline_args['outDir'], pipeline_args['projectName']))
+					pipeline_config['thousand_genomes']['path'] = newTGPconfig
 
 					extract_lines = subprocess.Popen(['tail', '-4', os.path.join(outdir, 'trio_concordance_1000genomes.log')], stdout=subprocess.PIPE)
 					get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
@@ -494,7 +542,7 @@ class Pipeline(BasePipeline):
 					average_hap_map_concordance.append(round(float(concordant_rate.group(1))*100, 2))
 
 					update_child = open(os.path.join(outdir, 'update_child.txt'), 'w')
-					update_sex = open(os.path.join(outdir, '/update_sex.txt'), 'w')
+					update_sex = open(os.path.join(outdir, 'update_sex.txt'), 'w')
 					kinship = {}
 					hapmap_genders = {}
 					update_info = trios_run_together_update.get(key, 'DNE')
