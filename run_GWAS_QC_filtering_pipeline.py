@@ -50,7 +50,7 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--maxFemale', default=0.20, type=float, help='[default:0.20] F scores below this value will be imputed as female subjects based on X-chromosome imputation')
 		parser.add_argument('--minMale', default=0.80, type=float, help='[default:0.80] F scores above this value will be imputed as male subjects based on X-chromosome imputation')
 		parser.add_argument('--chipFailure', default=1, type=int, help='[default:1] Maximum number of sex discrepencies or missigness threshold fails a chip can have before considered failing')
-
+		parser.add_argument('--knownSNPfails', default=None, type=str, help='[default:None] A list of snp names (must match snp name in array), one per line, to remove prior to calculating sample failures')
 
 	@staticmethod
 	def check_input_format(inputPlinkfile, plink):
@@ -405,6 +405,48 @@ class Pipeline(BasePipeline):
 		self.separate_sexes(
 			plinkFam=pipeline_args['inputPLINK'][:-4]+'.fam', outDir=outdir
 			)
+		
+		
+		#DEBUG START
+		if pipeline_args['knownSNPfails'] != None:
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+				Parameter('--exclude', pipeline_args['knownSNPfails']),
+				Parameter('--make-bed'),
+				Parameter('--out', pipeline_args['inputPLINK'][:-4] + '_updated_callrate')
+				)
+
+			# sets the input plink files specified at runtime to the newly updated plink
+			pipeline_args['inputPLINK'] = pipeline_args['inputPLINK'][:-4] + '_updated_callrate.bed'
+			
+			# get new missing call rate calculations
+			plink_general.run(
+				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
+				Parameter('--missing'),
+				Parameter('--out', os.path.join(pipeline_args['outDir'], pipeline_args['projectName'], 'updated_callrates'))
+				)
+			
+			# update the sample table with new call rates
+			original_sampleTable = pandas.read_table(pipeline_args['sampleTable'], dtype=str)
+			new_callrates = pandas.read_table(
+				os.path.join(pipeline_args['outDir'], pipeline_args['projectName'], 'updated_callrates.imiss'),
+					delim_whitespace=True,
+					dtype=str
+					)
+			
+			#temp rename column in either sample Table or plink imiss file so merge can happen by sampleID
+			tempHeaders=original_sampleTable.rename(columns={'Sample ID':'IID'})
+			combine = pandas.DataFrame.merge(tempHeaders, new_callrates, how="left", on="IID")
+			combine['new_callrate'] = 1 - combine['F_MISS'].astype(float)
+			finalCombine=combine.rename(index=str, columns={'IID':'Sample ID', 'Call Rate': 'original_CallRate', 'new_callrate':'Call Rate'})
+			finalCombine.to_csv(os.path.join(pipeline_args['outDir'], pipeline_args['projectName'], 'Sample_Table_updated.txt'), index=False, sep="\t")
+
+			# update sampleTable path input at runtime to newly updated call rate sampleTable
+			pipeline_args['sampleTable'] = os.path.join(pipeline_args['outDir'], pipeline_args['projectName'], 'Sample_Table_updated.txt')
+		
+		else:
+			pass
+		#DEBUG END
 
 
 		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
