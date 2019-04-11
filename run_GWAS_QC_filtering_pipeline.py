@@ -50,7 +50,8 @@ class Pipeline(BasePipeline):
 		parser.add_argument('--maxFemale', default=0.20, type=float, help='[default:0.20] F scores below this value will be imputed as female subjects based on X-chromosome imputation')
 		parser.add_argument('--minMale', default=0.80, type=float, help='[default:0.80] F scores above this value will be imputed as male subjects based on X-chromosome imputation')
 		parser.add_argument('--chipFailure', default=1, type=int, help='[default:1] Maximum number of sex discrepencies or missigness threshold fails a chip can have before considered failing')
-		parser.add_argument('--knownSNPfails', default=None, type=str, help='[default:None] A list of snp names (must match snp name in array), one per line, to remove prior to calculating sample failures')
+		parser.add_argument('--knownSNPfails', default=None, type=str, help='[default:None] A list of snp names (must match snp name in array), one per line, to remove prior to calculating sample call rate failures')
+		#parser.add_argument('--removeNoCalls', action='store_true', help='[default:False] A flag that indicates to calucate and remove snps that have a call rate of 0% across all samples and to removes these snps prior to calculating sample call rate failures')
 
 	@staticmethod
 	def check_input_format(inputPlinkfile, plink):
@@ -407,7 +408,6 @@ class Pipeline(BasePipeline):
 			)
 		
 		
-		#DEBUG START
 		if pipeline_args['knownSNPfails'] != None:
 			plink_general.run(
 				Parameter('--bfile', pipeline_args['inputPLINK'][:-4]),
@@ -446,7 +446,6 @@ class Pipeline(BasePipeline):
 		
 		else:
 			pass
-		#DEBUG END
 
 
 		# *****JUST ILLUMINA BASED STATS HERE, NO ACTUAL FILTERING!*****
