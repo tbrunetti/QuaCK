@@ -209,25 +209,28 @@ class Pipeline(BasePipeline):
 
 			os.remove(os.path.join(outdir, 'trio_concordance_1000genomes.missnp'))
 			flips_vs_removals += 1
-			merge_check(TGP=os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped.bed'), outdir=outdir)
-		
+			merge_check(TGP=str(os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped.bed')), outdir=outdir)
+
 			if os.path.exists(os.path.join(outdir, 'trio_concordance_1000genomes.missnp')) and flips_vs_removals==1:
 				print("Trialleic snps found...removing...")
 
 				subprocess.call([plink, '--bfile', os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped'),
 								'--exclude', os.path.join(outdir, 'trio_concordance_1000genomes.missnp'),
 								'--make-bed',
-								'--out', os.path.join(outdir, os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed'))
+								'--out', os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed')
 								])
 
 				os.remove(os.path.join(outdir, 'trio_concordance_1000genomes.missnp'))
 				flips_vs_removals += 1
 
 				merge_check(TGP=os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed.bed'), outdir=outdir)
-
-				return os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed.bed')
+				newTGPconfig=str(os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed.bed'))
+				print("FIRST HERE:"+newTGPconfig)
+				return newTGPconfig
 			else:
-				return os.path.join(outdir, tgp.split('/')[-1][-4] + '_flipped.bed')
+				newTGPconfig=str(os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped.bed'))
+				print("HERE!!!" + newTGPconfig)
+				return newTGPconfig
 
 		else:
 			return tgp
@@ -235,12 +238,17 @@ class Pipeline(BasePipeline):
 
 
 	@staticmethod
-	def concordance(qcPassPLINK, plink, hapmap, tgp, outdir):
+	def concordance(self, qcPassPLINK, plink, hapmap, tgp, outdir):
 		import pandas
 		import subprocess
 		import re
 		import numpy as np
 
+		newTGPconfig = self.concordance_flips(plink=plink, checkPlink=qcPassPLINK, tgp=tgp, outdir=outdir)
+		print(tgp)
+		tgp = newTGPconfig
+
+		print("In concordance:" + str(tgp))
 		stage_for_deletion = []
 		indConc = []
 
@@ -564,7 +572,10 @@ class Pipeline(BasePipeline):
 					# trio concordance check against 1000 genomes
 					# Need to extract just NA followed by number part of trios and rename FID and IID with the NA ID (ONLY TO CHECK FOR 1000 GENOMES CONCORDANCE)
 					newTGPconfig = self.concordance_flips(plink=pipeline_config['plink']['path'], tgp=pipeline_config['thousand_genomes']['path'], checkPlink=pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_temp_updated', outdir=os.path.join(pipeline_args['outDir'], pipeline_args['projectName']))
+					print("The newTGPconfig is" + str(newTGPconfig))
+					print("Orignial: "+ str(pipeline_config['thousand_genomes']['path']))
 					pipeline_config['thousand_genomes']['path'] = newTGPconfig
+					print("New: "+ pipeline_config['thousand_genomes']['path'])
 
 					extract_lines = subprocess.Popen(['tail', '-4', os.path.join(outdir, 'trio_concordance_1000genomes.log')], stdout=subprocess.PIPE)
 					get_concordance = subprocess.check_output(['grep', '^[0-9]'], stdin=extract_lines.stdout)
@@ -711,7 +722,7 @@ class Pipeline(BasePipeline):
 		# ----------------------------------------- END OF TRIO CHECKS ----------------------------------------------------
 		# ------------------------------ BEGIN HAPMAP INDIVIDUAL CONCORDANCE CHECKS ---------------------------------------
 
-		tempFiles, avgIndiConc = self.concordance(qcPassPLINK=pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC', plink=pipeline_config['plink']['path'], 
+		tempFiles, avgIndiConc = self.concordance(self=self, qcPassPLINK=pipeline_args['inputPLINK'][:-4]+'_passing_Illumina_sample_SNP_QC', plink=pipeline_config['plink']['path'], 
 			hapmap=pipeline_config['hapmap_info']['path'], tgp=pipeline_config['thousand_genomes']['path'], outdir=os.path.join(pipeline_args['outDir'], pipeline_args['projectName']))
 
 		stage_for_deletion.extend(tempFiles)
