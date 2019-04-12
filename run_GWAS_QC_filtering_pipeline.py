@@ -182,6 +182,8 @@ class Pipeline(BasePipeline):
 
 	@staticmethod
 	def concordance_flips(plink, checkPlink, tgp, outdir):
+		import os
+		import subprocess
 		
 		print("Checking for strand flips and triallelic snps for TGP concordance...")
 		
