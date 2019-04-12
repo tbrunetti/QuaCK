@@ -393,16 +393,21 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_summary.line(20, 32, 190, 32)
 	
 	# sex check and sample missingness by batch and by chip
-	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
-	sample_missingness_dataframe = pandas.read_table(missingness, delim_whitespace=True)
+	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True) # sexcheck results from plink
+	sample_missingness_dataframe = pandas.read_table(missingness, delim_whitespace=True, dtype=str) # imiss results from plink
+	sample_missingness_dataframe.to_csv(os.path.join(outDir, "sampleMissingness.txt"), index=False, sep="\t")
 	batch_sex = {}
 	batch_missing = {}
 	for batch in list(sex_check_dataframe['IID']):
 		if re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', batch):
 			batch_id = re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', batch)
+			print(batch_id.group(0)) # full IID
+			print(batch_id.group(1)) # batch ID
+			print(batch_id.group(2)) # well ID
 			if batch_id.group(1) in batch_sex:
+				#key batch ID (WG1, WG2, etc...)
 				batch_sex[batch_id.group(1)] = batch_sex[batch_id.group(1)] + [list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['STATUS']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['PEDSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['SNPSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['F']) + [batch_id.group(2)]]
-				batch_missing[batch_id.group(1)] = batch_missing[batch_id.group(1)] + [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]]
+				batch_missing[batch_id.group(1)] = batch_missing[batch_id.group(1)] + [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]] #battch is IID
 			else:
 				batch_sex[batch_id.group(1)] = [list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['STATUS']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['PEDSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['SNPSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['F']) + [batch_id.group(2)]]
 				batch_missing[batch_id.group(1)] = [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]]
@@ -420,11 +425,13 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	for key in batch_missing:
 		callrate_per_batch = [[str(key), str(batch_missing[key][i][0]), str(batch_missing[key][i][1])] for i in range(0, len(batch_missing[key]))]
 		all_batch_callrate = all_batch_callrate + callrate_per_batch
+
 	# missingness data read data into pandas dataframe
-	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate (%)', 'wellID'])
-	missing_call_dataframe['missing call rate (%)']=missing_call_dataframe['missing call rate (%)'].astype(float)*100
+	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate (ratio)', 'wellID'], dtype=str)
+	missing_call_dataframe['missing call rate (%)']=missing_call_dataframe['missing call rate (ratio)'].astype(float)*100
 	missing_call_dataframe.dropna(axis=0, how="any", subset=['missing call rate (%)'], inplace=True)
-	missing_call_dataframe['call rate (%)'] = (1 - missing_call_dataframe['missing call rate (%)'].astype(float))*100
+	missing_call_dataframe['call rate (%)'] = (100 - missing_call_dataframe['missing call rate (%)'].astype(float))
+	missing_call_dataframe.to_csv(os.path.join(outDir,"sampleMissingness_update.txt"), index=False, sep="\t")
 	missing_genotypes = sns.boxplot(x='call rate (%)', y='batch', data=missing_call_dataframe, color=".8")
 	missing_genotypes = sns.stripplot(x='call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
 	plt.suptitle('Overall call rate per sample across batches')
