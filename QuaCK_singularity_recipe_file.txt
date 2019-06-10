@@ -1,0 +1,77 @@
+Bootstrap: debootstrap
+OSVersion: xenial
+MirrorURL: http://us.archive.ubuntu.com/ubuntu/
+Include: apt
+
+%help
+	This container is built to run the QuaCK repo located on github: https://github.com/tbrunetti/QuaCK
+
+%setup
+	cp run_GWAS_QC_filtering_pipeline.py $SINGULARITY_ROOTFS
+	cp run_GWAS_QC_filtering_pipeline.py.json $SINGULARITY_ROOTFS
+	cp run_GWAS_QC_filtering_pipeline.json $SINGULARITY_ROOTFS
+	echo $SINGULARITY_ROOTFS
+	ls $SINGULARITY_ROOTFS
+
+%files
+	LICENSE
+	format_sample_sheet_names.py /mnt
+	generate_illumina_snp_stats.py /mnt
+	generate_report.py /mnt
+	hapmap_trio_info.txt /mnt
+	Parameter_Definitions.pdf /mnt
+	pre-QC-initialization-workflow.pdf /mnt
+	pre-QC-initialization-workflow.png /mnt
+	QC-pipeline-workflow.pdf /mnt
+	QC-pipeline-workflow.png /mnt
+	run_GWAS_QC_filtering_pipeline.py /mnt
+	transparent_AMC_cropped.png /mnt
+	new_TGP_vol1_MEGA_flipped_triallelic_removed_no_atgc.bed /mnt
+	new_TGP_vol1_MEGA_flipped_triallelic_removed_no_atgc.bim /mnt
+	new_TGP_vol1_MEGA_flipped_triallelic_removed_no_atgc.fam /mnt
+	run_GWAS_QC_filtering_pipeline.py.json /mnt
+	run_GWAS_QC_filtering_pipeline.json /mnt
+	plink /mnt
+
+%runscript
+	echo "chunkypipes framework is ready!"
+	cd /mnt
+	exec /usr/local/bin/chunky "$@"
+
+%post
+	echo "Installing all container dependencies!"
+	apt-get -y update
+	apt-get -y install software-properties-common
+	apt-add-repository universe
+	apt-get -y update
+	apt-get -y install python
+	apt-get -y install python-pip
+	echo "verifiying pip install"
+	pip -V
+	pip install chunkypipes
+	pip install pandas
+	pip install numpy
+	pip install matplotlib==2.2.4
+	pip install fpdf
+	pip install Pillow
+	pip install pypdf2
+	pip install statistics
+	pip install xlrd
+	pip install scipy==1.2.0
+	pip install seaborn==0.8.0
+	/usr/local/bin/chunky init /mnt
+	cp run_GWAS_QC_filtering_pipeline.py /mnt/.chunky/pipelines
+	cp run_GWAS_QC_filtering_pipeline.py.json /mnt/.chunky/configs
+	cp run_GWAS_QC_filtering_pipeline.py /mnt/.chunky/pipelines/run_GWAS_QC_filtering_pipeline
+	cp run_GWAS_QC_filtering_pipeline.json /mnt/.chunky/configs
+	cd /mnt
+	ls
+	chmod -R a+rwx /mnt
+	chmod -R a+rwx /mnt/.chunky
+
+%environment
+	CHUNKY_HOME=/mnt
+	export CHUNKY_HOME
+	export PATH="${PATH}:/mnt:/usr/bin:/bin:/usr/local/sbin/:/usr/local/bin"
+	export PYTHONPATH="${PYTHONPATH}:/mnt"
+	export PYTHONPATH="${PYTHONPATH}:/usr/local/bin/:/usr/lib/python2.7/:/usr/bin/"
