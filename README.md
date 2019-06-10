@@ -18,7 +18,9 @@ What was updated in V0.2.0?
 * TO DO: internal report also gives specifics on chip failures due to poor call rate threholds  
 * TO DO: duplicate concordance is now printed as a text file for every pairwise duplicate checked in addition to the average on the summary PDF  
 * TO DO: better organization of a deliverable product  
-* TO DO: argument added to now exclude a list of snps before proceeding with full analysis (updates new callrate in SampleTable.txt)
+* TO DO: argument added to now exclude a list of snps before proceeding with full analysis (updates new callrate in SampleTable.txt)  
+* TO DO: better error try and except messaging  
+* TO DO: singularity recipe files need to be updated to change permission of some files
 
 ## Table of Contents
 --------------------
