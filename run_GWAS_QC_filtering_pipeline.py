@@ -225,11 +225,9 @@ class Pipeline(BasePipeline):
 
 				merge_check(TGP=os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed.bed'), outdir=outdir)
 				newTGPconfig=str(os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped_triallelic_removed.bed'))
-				print("FIRST HERE:"+newTGPconfig)
 				return newTGPconfig
 			else:
 				newTGPconfig=str(os.path.join(outdir, tgp.split('/')[-1][:-4] + '_flipped.bed'))
-				print("HERE!!!" + newTGPconfig)
 				return newTGPconfig
 
 		else:
@@ -332,8 +330,7 @@ class Pipeline(BasePipeline):
 					stage_for_deletion.append(os.path.join(outdir, line.split('\t')[1].rstrip() + '.log'))
 				except AttributeError:
 					concordanceResults.write(str(line.split()[1]) + '\t' + "ID NOT FOUND IN TGP CONCORDANCE DATA SET" + '\n')
-
-
+		
 		concordanceResults.flush() 
 		concordanceResults.close()
 
@@ -354,7 +351,8 @@ class Pipeline(BasePipeline):
 	def run_pipeline(self, pipeline_args, pipeline_config):
 		
 		import datetime
-		import subprocess
+		import subprocessTGPconfig
+
 		import statistics as stats
 		sys.path.append(".")
 		import pandas
