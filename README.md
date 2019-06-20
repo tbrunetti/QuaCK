@@ -12,13 +12,14 @@ What was updated in V0.2.0?
 * more thorough clean up of temporary files in project share  
 * code has been updated to be more mindful to be a little less error-prone in terms of reading in arugments such as joining paths rather than concatenating paths  
 * bug fixes in code syntax  
-* TO DO: fix internal report boxplots  
-* TO DO: pipeline now handles strand flips and triallelic call issues for concordance  
-* TO DO: SampleTable.txt is now automatically updated with call rate after removing noCall SNPs and noCall SNPs are reported  
+* fix internal report boxplots  
+* pipeline now handles strand flips and triallelic call issues for concordance  
+* SampleTable.txt is now automatically updated with call rate after removing noCall SNPs and noCall SNPs are reported  
+* bug fix to handle NaN in callrate statistics for mean, median, standard deviation, max, min by replacing stat module with numpy  
 * TO DO: internal report also gives specifics on chip failures due to poor call rate threholds  
 * TO DO: duplicate concordance is now printed as a text file for every pairwise duplicate checked in addition to the average on the summary PDF  
 * TO DO: better organization of a deliverable product  
-* TO DO: argument added to now exclude a list of snps before proceeding with full analysis (updates new callrate in SampleTable.txt)  
+* argument added to now exclude a list of snps before proceeding with full analysis (updates new callrate in SampleTable.txt)  
 * TO DO: better error try and except messaging  
 * TO DO: singularity recipe files need to be updated to change permission of some files
 
