@@ -207,7 +207,9 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 	total_samples = len(list(sample_qc_table['Sample ID']))
 	# retrieve sample ids of those with missing call rage less than call rate parameter provided by user; default = 0.991
 	samples_to_remove = list(sample_qc_table[sample_qc_table['Call Rate'] < callrate]['Sample ID'])
-	basic_call_stats = [stats.median(sample_qc_table['Call Rate']), stats.mean(sample_qc_table['Call Rate']), stats.stdev(sample_qc_table['Call Rate']), min(sample_qc_table['Call Rate']), max(sample_qc_table['Call Rate'])]
+	#basic_call_stats = [stats.median(sample_qc_table['Call Rate']), stats.mean(sample_qc_table['Call Rate']), stats.stdev(sample_qc_table['Call Rate']), min(sample_qc_table['Call Rate']), max(sample_qc_table['Call Rate'])]
+	basic_call_stats = [np.nanmedian(sample_qc_table['Call Rate']), np.nanmean(sample_qc_table['Call Rate']), np.nanstd(sample_qc_table['Call Rate']), np.nanmin(sample_qc_table['Call Rate']), np.nanmax(sample_qc_table['Call Rate'])]
+
 	pdf.set_x(20)
 	pdf.multi_cell(0, 30, "Illumina Sample Quality Assessment", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
