@@ -16,6 +16,7 @@ What was updated in V0.2.0?
 * pipeline now handles strand flips and triallelic call issues for concordance  
 * SampleTable.txt is now automatically updated with call rate after removing noCall SNPs and noCall SNPs are reported  
 * bug fix to handle NaN in callrate statistics for mean, median, standard deviation, max, min by replacing stat module with numpy  
+* tgp_concordance file added so users do not have to provide their own MEGA infinium concordance files
 * TO DO: internal report also gives specifics on chip failures due to poor call rate threholds  
 * TO DO: duplicate concordance is now printed as a text file for every pairwise duplicate checked in addition to the average on the summary PDF  
 * TO DO: better organization of a deliverable product  

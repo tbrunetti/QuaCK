@@ -674,6 +674,8 @@ class Pipeline(BasePipeline):
 								for line in errors:
 									line = line.rstrip().split()
 							trio_rates.write(str(line[-1]) + '\n')
+							stage_for_deletion.extend([os.path.join(outdir, 'mendel_errors_'+str(key)+'.fmendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.imendel'),
+									os.path.join(outdir, 'mendel_errors_'+str(key)+'.lmendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.hh'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.log')])
 						except:
 							trio_rates.write('NA trio' + '\n')
 					
@@ -693,6 +695,8 @@ class Pipeline(BasePipeline):
 								for line in errors:
 									line = line.rstrip().split()
 							trio_rates.write(str(line[-1]) + '\n')
+							stage_for_deletion.extend([os.path.join(outdir, 'mendel_errors_'+str(key)+'.fmendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.imendel'),
+									os.path.join(outdir, 'mendel_errors_'+str(key)+'.lmendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.hh'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.log')])
 						except:
 							trio_rates.write('not a parent-child duo' + '\n')
 
@@ -713,7 +717,7 @@ class Pipeline(BasePipeline):
 								pipeline_args['inputPLINK'][:-4]+'_hapmap_trios_updated.nosex', os.path.join(outdir, 'mendel_errors_'+str(key)+'.imendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.lmendel'), 
 								os.path.join(outdir, 'mendel_errors_'+str(key)+'.fmendel'), os.path.join(outdir, 'mendel_errors_'+str(key)+'.hh'), os.path.join(outdir, 'update_child.txt'), 
 								os.path.join(outdir, 'update_sex.txt'), os.path.join(outdir,'trio_concordance_1000genomes.diff'), os.path.join(outdir, 'temp_trio_file_extract.txt'),
-								os.path.join(outdir, 'temp_trio_file_update.txt')])
+								os.path.join(outdir, 'temp_trio_file_update.txt'), os.path.join(outdir, 'mendel_renames.txt')])
 			
 
 
@@ -800,6 +804,9 @@ class Pipeline(BasePipeline):
 			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4] + '_dup2.bed', pipeline_args['inputPLINK'][:-4] + '_dup2.bim', pipeline_args['inputPLINK'][:-4] + '_dup2.fam', pipeline_args['inputPLINK'][:-4] + '_dup2.hh'])
 			stage_for_deletion.extend([pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.bed', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.bim', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.fam', pipeline_args['inputPLINK'][:-4] + '_dup2_names_updated.hh'])
 			stage_for_deletion.extend([outdir + '/update_trio_names.txt'])
+			stage_for_deletion.extend([os.path.join(outdir, 'duplicates1.txt')])
+			stage_for_deletion.extend([os.path.join(outdir, 'duplicates2.txt')])
+
 			
 		else: # there are no duplicates in the data set
 			duplicate_concordance = {'total_overlapping_calls': 0, 'total_nonmissing': 0, 'total_concordant':0, 'percent_concordance':'No duplicates: '+str(0.00)}	
