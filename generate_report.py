@@ -1,4 +1,6 @@
 from fpdf import FPDF
+import sys
+import os
 import re
 import pandas
 import matplotlib as mpl
@@ -14,7 +16,7 @@ import warnings
 
 # this method will be called last so everything can be calculated
 # then rearrange pages in PDF so this become page 2
-def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon, sexCheck):
+def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon, sexCheck, unspecifiedSex):
 	num_samples_analyzed = sum(1 for line in open(originalFile+'.fam'))
 	num_samples_qc_pass = sum(1 for line in open(cleanedFile+'.fam'))
 	num_snps_analyzed = sum(1 for line in open(originalFile+'.bim'))
@@ -44,6 +46,8 @@ def overall_main_page_stats(pdf, originalFile, cleanedFile, concordance, dupCon,
 	pdf.multi_cell(0, 8, "Total samples passing QC:  "+str(num_samples_qc_pass), 1, 1, 'L')
 	pdf.set_x(30)
 	pdf.multi_cell(0, 8, "Total samples with gender discrepancies:  "+str(sexCheck), 1, 1, 'L')
+	pdf.set_x(30)
+	pdf.multi_cell(0, 8, "Total samples with missing genders in manifest:  "+str(unspecifiedSex), 1, 1, 'L')
 	pdf.multi_cell(0, 8, "\n\n", 0, 1, 'L')
 	pdf.set_font('Arial', 'B', 16)
 	pdf.multi_cell(0, 8, "SNP Summary", 1, 'L', True)
@@ -127,8 +131,8 @@ def explanation_of_deliverables(pdf, params):
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, 'Nine text files are provided:', 0, 1, 'J')
 	pdf.set_x(35)
-	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
-		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' +  'trio_reports.txt' + 
+	pdf.multi_cell(0, 5, '\n'+'snps_failing_QC_details.txt' + '\n' +  'samples_failing_callrate_QC_details.txt' +'\n' + 'GenomeStudio_samples_table.txt' +
+		'\n' + 'GenomeStudio_SNPs_table.txt' + '\n' + 'GenomeStudio_final_report.txt' + '\n' +  'trio_reports.txt' + 'individual_concordance_reports.txt' +
 		'\n' + 'final_report_statistics_per_sample.txt'+ '\n' + 'md5_check_sum.txt' + '\n\n', 0, 1, 'L') 
 	pdf.set_x(25)
 	pdf.multi_cell(0, 5, '     The snps_failing_QC_details.txt is a tab-delimited file that contains all the SNPs that were removed due to failing at least \
@@ -193,7 +197,7 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 	print "Running Illumina Sample QC..."
 	
-	samples_to_remove_text = open(outDir+'/'+'samples_to_remove.txt', 'w')
+	samples_to_remove_text = open(os.path.join(outDir, 'samples_to_remove.txt'), 'w')
 	pdf.add_page()
 	pdf.set_margins(20, 10, 20)
 
@@ -203,7 +207,9 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 	total_samples = len(list(sample_qc_table['Sample ID']))
 	# retrieve sample ids of those with missing call rage less than call rate parameter provided by user; default = 0.991
 	samples_to_remove = list(sample_qc_table[sample_qc_table['Call Rate'] < callrate]['Sample ID'])
-	basic_call_stats = [stats.median(sample_qc_table['Call Rate']), stats.mean(sample_qc_table['Call Rate']), stats.stdev(sample_qc_table['Call Rate']), min(sample_qc_table['Call Rate']), max(sample_qc_table['Call Rate'])]
+	#basic_call_stats = [stats.median(sample_qc_table['Call Rate']), stats.mean(sample_qc_table['Call Rate']), stats.stdev(sample_qc_table['Call Rate']), min(sample_qc_table['Call Rate']), max(sample_qc_table['Call Rate'])]
+	basic_call_stats = [np.nanmedian(sample_qc_table['Call Rate']), np.nanmean(sample_qc_table['Call Rate']), np.nanstd(sample_qc_table['Call Rate']), np.nanmin(sample_qc_table['Call Rate']), np.nanmax(sample_qc_table['Call Rate'])]
+
 	pdf.set_x(20)
 	pdf.multi_cell(0, 30, "Illumina Sample Quality Assessment", 0, 1, 'L')
 	pdf.line(20, 32, 190, 32)
@@ -230,7 +236,7 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 	chips_fail_missingness_check = {}
 
 	famfile = pandas.read_table(fam, delim_whitespace=True, names=['FID', 'IID', 'PAT', 'MAT', 'SEX', 'AFF'])
-	reason_samples_fail = open(outDir + '/' + 'samples_failing_QC_details.txt', 'w')
+	reason_samples_fail = open(os.path.join(outDir, 'samples_failing_callrate_QC_details.txt'), 'w')
 	# create a files called "samples_to_remove.txt" to be passed in proper format to plink for sample removal
 	temp_remove = {x:list(famfile.loc[famfile['IID'] == x]['FID']) for x in samples_to_remove}
 	for key in temp_remove:
@@ -255,10 +261,10 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 		sample_quality_graph = sns.jointplot('Call Rate','p10 GC', data=sampleInfo, kind="reg")
 		plt.suptitle('Overall Sample Quality')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-		plt.savefig(outDir+'/'+'sample_gccallrate.png')
+		plt.savefig(os.path.join(outDir,'sample_gccallrate.png'))
 		plt.close()
-		pdf.image(outDir+'/'+"sample_gccallrate.png", x=20, y=120, w=170)
-		cleanup.append(outDir+'/'+"sample_gccallrate.png")  # puts image in line for deletion; happens after final PDF has been generated
+		pdf.image(os.path.join(outDir, "sample_gccallrate.png"), x=20, y=120, w=170)
+		cleanup.append(os.path.join(outDir, "sample_gccallrate.png"))  # puts image in line for deletion; happens after final PDF has been generated
 	
 	
 	check_GC_callrate(sampleInfo=sample_qc_table, cleanup=cleanup)
@@ -267,10 +273,20 @@ def illumina_sample_overview(inputFile, fam, pdf, callrate, outDir, cleanup):
 
 
 
-def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, cleanup):
+def graph_sexcheck(pdf, warning_samples, sexcheck, maxF, minF, outDir, cleanup):
+	'''
+	pdf: a FPDF object (separate instance of FPDF object in function batch_effects())
+	warning_samples: a new open() file object to write samples with gender discrepanices
+	sexcheck: pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck
+	maxF: pipeline_args['maxFemale']; float
+	minF: pipeline_args['minMale']; float
+	outDir: output directory
+	cleanup: a list that contains paths to files that can be removed
+	'''
+
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
-	print "checking sex concordance"
+	print("checking sex concordance")
 	pdf.add_page()
 	pdf.set_font('Arial', 'B', 24)
 	pdf.set_margins(20, 10, 20)
@@ -287,10 +303,10 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	plt.suptitle('Sex and F coefficient based on pedigree sex data')
 	sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-	plt.savefig(outDir+'/'+'sample_sex.png', bbox_inches='tight')
+	plt.savefig(os.path.join(outDir, 'sample_sex.png'), bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"sample_sex.png", x=20, y=105, w=79, h=85)
-	cleanup.append(outDir+'/'+"sample_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
+	pdf.image(os.path.join(outDir, "sample_sex.png"), x=20, y=105, w=79, h=85)
+	cleanup.append(os.path.join(outDir, "sample_sex.png"))  # puts image in line for deletion; happens after final PDF has been generated
 
 	imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_check_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
 	plt.axhline(y=float(maxF), linestyle="--")
@@ -298,10 +314,10 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	plt.suptitle('Sex and F coefficient based on imputed sex data')
 	imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeing coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-	plt.savefig(outDir+'/'+'imputed_sex.png', bbox_inches='tight')
+	plt.savefig(os.path.join(outDir, 'imputed_sex.png'), bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"imputed_sex.png", x=110, y=105, w=79, h=85)
-	cleanup.append(outDir+'/'+"imputed_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
+	pdf.image(os.path.join(outDir, "imputed_sex.png"), x=110, y=105, w=79, h=85)
+	cleanup.append(os.path.join(outDir, "imputed_sex.png"))  # puts image in line for deletion; happens after final PDF has been generated
 
 	discrepancies_bw_imputed_and_collected = sns.lmplot(x='rank', y='F', hue='STATUS', data=sorted_sex_check_dataframe, fit_reg=False, palette={'OK':'black', 'PROBLEM':'red'}, scatter_kws={"s": 20})
 	plt.axhline(y=float(maxF), linestyle="--")
@@ -310,10 +326,10 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 	plt.subplots_adjust(top=.9)
 	discrepancies_bw_imputed_and_collected.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-	plt.savefig(outDir+'/'+'discrepancies_sex.png', bbox_inches='tight')
+	plt.savefig(os.path.join(outDir, 'discrepancies_sex.png'), bbox_inches='tight')
 	plt.close()
-	pdf.image(outDir+'/'+"discrepancies_sex.png", x=20, y=210, w=79, h=85)
-	cleanup.append(outDir+'/'+"discrepancies_sex.png")  # puts image in line for deletion; happens after final PDF has been generated
+	pdf.image(os.path.join(outDir, "discrepancies_sex.png"), x=20, y=210, w=79, h=85)
+	cleanup.append(os.path.join(outDir, "discrepancies_sex.png"))  # puts image in line for deletion; happens after final PDF has been generated
 	
 
 	# determines which discrepanices are probably human error prone versus sample quality error
@@ -338,19 +354,35 @@ def graph_sexcheck(pdf, reason_samples_fail, sexcheck, maxF, minF, outDir, clean
 
 	ambiguous_samples = list(set(indeterminate_sex) - set(fixed_sex)) # ambiguous sample IDs only
 
-	with open(reason_samples_fail.name, 'a+') as sex_outliers:
-		for sample in fixed_sex:
+	with open(warning_samples.name, 'a+') as sex_outliers:
+		for sample in list(set(fixed_sex)-set(unknown_sex)):
 			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['FID'])[0]) + '\t' +str(sample) +'\t' + 
 				'gender_mismatch: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == sample]['F'])[0]) +'\n')
 		for ambiguous in ambiguous_samples :
 			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == ambiguous]['FID'])[0]) + '\t' +str(ambiguous) +'\t' + 
 				'ambiguous_gender: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == ambiguous]['F'])[0]) +'\n')
+		for unknowns in unknown_sex:
+			sex_outliers.write(str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == unknowns]['FID'])[0]) + '\t' +str(unknowns) +'\t' + 
+				'missing_gender_in_manifest: '+str(list(sorted_sex_check_dataframe[sorted_sex_check_dataframe['IID'] == unknowns]['F'])[0]) +'\n')
+
 
 		sex_outliers.flush()
 
-	return sex_outliers, str(len(indeterminate_sex)-len(unknown_sex)), cleanup
+	return sex_outliers, str(len(fixed_sex)-len(unknown_sex)), str(len(unknown_sex)), cleanup
 
 def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, maxF, minF, outDir, cleanup):
+	'''
+	pdf: a FPDF object (separate instance of FPDF object in function graph_sexcheck())
+	chipFail: pipeline_args['chipFailure']; integer of max number of failures to consider chip a fail
+	sexcheck: pipeline_args['inputPLINK'][:-4]+'_passing_QC.sexcheck
+	missingness: pipeline_args['inputPLINK'][:-4]+'_passing_QC.imiss
+	chip_missingness_fails: text file of FID and IID of samples to removed
+	maxF: pipeline_args['maxFemale']; float
+	minF: pipeline_args['minMale']; float
+	outDir: output directory
+	cleanup: a list that contains paths to files that can be removed
+	'''
+
 	warnings.simplefilter(action = "ignore", category = FutureWarning)
 
 	batch_summary = FPDF()
@@ -363,16 +395,21 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_summary.line(20, 32, 190, 32)
 	
 	# sex check and sample missingness by batch and by chip
-	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True)
-	sample_missingness_dataframe = pandas.read_table(missingness, delim_whitespace=True)
+	sex_check_dataframe = pandas.read_table(sexcheck, delim_whitespace=True) # sexcheck results from plink
+	sample_missingness_dataframe = pandas.read_table(missingness, delim_whitespace=True, dtype=str) # imiss results from plink
+	sample_missingness_dataframe.to_csv(os.path.join(outDir, "sampleMissingness.txt"), index=False, sep="\t")
 	batch_sex = {}
 	batch_missing = {}
 	for batch in list(sex_check_dataframe['IID']):
 		if re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', batch):
 			batch_id = re.search('([A-Z]*[a-z]*[0-9]*)-DNA_([A-Z]{1}[0-9]{2}).*', batch)
+			print(batch_id.group(0)) # full IID
+			print(batch_id.group(1)) # batch ID
+			print(batch_id.group(2)) # well ID
 			if batch_id.group(1) in batch_sex:
+				#key batch ID (WG1, WG2, etc...)
 				batch_sex[batch_id.group(1)] = batch_sex[batch_id.group(1)] + [list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['STATUS']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['PEDSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['SNPSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['F']) + [batch_id.group(2)]]
-				batch_missing[batch_id.group(1)] = batch_missing[batch_id.group(1)] + [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]]
+				batch_missing[batch_id.group(1)] = batch_missing[batch_id.group(1)] + [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]] #battch is IID
 			else:
 				batch_sex[batch_id.group(1)] = [list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['STATUS']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['PEDSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['SNPSEX']) + list(sex_check_dataframe[sex_check_dataframe['IID'] == batch]['F']) + [batch_id.group(2)]]
 				batch_missing[batch_id.group(1)] = [list(sample_missingness_dataframe[sample_missingness_dataframe['IID'] == batch]['F_MISS']) + [batch_id.group(2)]]
@@ -390,17 +427,21 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	for key in batch_missing:
 		callrate_per_batch = [[str(key), str(batch_missing[key][i][0]), str(batch_missing[key][i][1])] for i in range(0, len(batch_missing[key]))]
 		all_batch_callrate = all_batch_callrate + callrate_per_batch
+
 	# missingness data read data into pandas dataframe
-	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate (%)', 'wellID'])
-	missing_call_dataframe['missing call rate (%)']=missing_call_dataframe['missing call rate (%)'].astype(float)*100
-	missing_genotypes = sns.boxplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, color=".8")
-	missing_genotypes = sns.stripplot(x='missing call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
-	plt.suptitle('Overall missing call rate per sample across batches')
+	missing_call_dataframe = pandas.DataFrame(all_batch_callrate, columns=['batch', 'missing call rate (ratio)', 'wellID'], dtype=str)
+	missing_call_dataframe['missing call rate (%)']=missing_call_dataframe['missing call rate (ratio)'].astype(float)*100
+	missing_call_dataframe.dropna(axis=0, how="any", subset=['missing call rate (%)'], inplace=True)
+	missing_call_dataframe['call rate (%)'] = (100 - missing_call_dataframe['missing call rate (%)'].astype(float))
+	missing_call_dataframe.to_csv(os.path.join(outDir,"sampleMissingness_update.txt"), index=False, sep="\t")
+	missing_genotypes = sns.boxplot(x='call rate (%)', y='batch', data=missing_call_dataframe, color=".8")
+	missing_genotypes = sns.stripplot(x='call rate (%)', y='batch', data=missing_call_dataframe, jitter=True)
+	plt.suptitle('Overall call rate per sample across batches')
 	plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-	plt.savefig(outDir+'/'+'missing_call_rate_samples.png')
+	plt.savefig(os.path.join(outDir, 'call_rate_samples.png'))
 	plt.close()
-	batch_summary.image(outDir+'/'+'missing_call_rate_samples.png', x=10, y=140, w=190, h=150)
-	cleanup.append(outDir+'/'+'missing_call_rate_samples.png')  # puts image in line for deletion; happens after final PDF has been generated
+	batch_summary.image(os.path.join(outDir, 'call_rate_samples.png'), x=10, y=140, w=190, h=150)
+	cleanup.append(os.path.join(outDir, 'call_rate_samples.png'))  # puts image in line for deletion; happens after final PDF has been generated
 	
 
 	# get sample missingness statistics across batches
@@ -408,8 +449,8 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_call_averages_paired = {}
 	for batch_name in batch_missing:
 		temp = missing_call_dataframe.loc[missing_call_dataframe['batch'].isin([batch_name])]
-		batch_call_averages.append(temp['missing call rate (%)'].mean())
-		batch_call_averages_paired[batch_name] = temp['missing call rate (%)'].mean() 
+		batch_call_averages.append(temp['call rate (%)'].mean())
+		batch_call_averages_paired[batch_name] = temp['call rate (%)'].mean() 
 	
 	# record chip statistics
 	total_chips = 0
@@ -436,10 +477,10 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		plt.suptitle('Sex and F coefficient based on pedigree sex data')
 		sample_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-		plt.savefig(outDir+'/'+'sample_sex'+str(key)+'.png', bbox_inches='tight')
+		plt.savefig(os.path.join(outDir, 'sample_sex'+str(key)+'.png'), bbox_inches='tight')
 		plt.close()
-		pdf.image(outDir+'/'+"sample_sex"+str(key)+'.png', x=20, y=85, w=79, h=85)
-		cleanup.append(outDir+'/'+"sample_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+		pdf.image(os.path.join(outDir, "sample_sex"+str(key)+'.png'), x=20, y=85, w=79, h=85)
+		cleanup.append(os.path.join(outDir, "sample_sex"+str(key)+'.png'))  # puts image in line for deletion; happens after final PDF has been generated
 
 		imputed_sex = sns.lmplot(x='rank', y='F', hue='SNPSEX', data=sorted_sex_batch_dataframe, fit_reg=False, palette={0:'black', 1:'pink', 2:'blue'}, scatter_kws={"s": 20})
 		plt.axhline(y=float(maxF), linestyle="--")
@@ -447,10 +488,10 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		plt.suptitle('Sex and F coefficient based on imputed sex data')
 		imputed_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-		plt.savefig(outDir+'/'+'imputed_sex'+str(key)+'.png', bbox_inches='tight')
+		plt.savefig(os.path.join(outDir, 'imputed_sex'+str(key)+'.png'), bbox_inches='tight')
 		plt.close()
-		pdf.image(outDir+'/'+"imputed_sex"+str(key)+'.png', x=110, y=85, w=79, h=85)
-		cleanup.append(outDir+'/'+"imputed_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+		pdf.image(os.path.join(outDir, "imputed_sex"+str(key)+'.png'), x=110, y=85, w=79, h=85)
+		cleanup.append(os.path.join(outDir, "imputed_sex"+str(key)+'.png'))  # puts image in line for deletion; happens after final PDF has been generated
 
 
 		discrepancies_sex = sns.lmplot(x='rank', y='F', hue='Discrepancies', data=sorted_sex_batch_dataframe, fit_reg=False, palette={"OK":'black', "PROBLEM":'red'}, scatter_kws={"s": 20})
@@ -459,10 +500,10 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 		plt.suptitle('Discrepancies between imputed and pedigree data')
 		discrepancies_sex.set(xlabel='ranked samples', ylabel='F inbreeding coefficient')
 		plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-		plt.savefig(outDir+'/'+'discrepancies_sex'+str(key)+'.png', bbox_inches='tight')
+		plt.savefig(os.path.join(outDir, 'discrepancies_sex'+str(key)+'.png'), bbox_inches='tight')
 		plt.close()
-		pdf.image(outDir+'/'+"discrepancies_sex"+str(key)+'.png', x=20, y=190, w=79, h=85)
-		cleanup.append(outDir+'/'+"discrepancies_sex"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+		pdf.image(os.path.join(outDir, "discrepancies_sex"+str(key)+'.png'), x=20, y=190, w=79, h=85)
+		cleanup.append(os.path.join(outDir, "discrepancies_sex"+str(key)+'.png'))  # puts image in line for deletion; happens after final PDF has been generated
 
 		contradictions_headers = sorted_sex_batch_dataframe['Discrepancies'].value_counts().index.tolist()
 		contradictions = sorted_sex_batch_dataframe['Discrepancies'].value_counts()
@@ -575,20 +616,20 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 			plt.xlabel("plate row ID", fontweight='bold')
 			plt.ylabel("Frequency", fontweight='bold')
 			plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-			plt.savefig(outDir+'/'+'problem_rows'+str(key)+'.png', bbox_inches='tight')
+			plt.savefig(os.path.join(outDir, 'problem_rows'+str(key)+'.png'), bbox_inches='tight')
 			plt.close()
-			pdf.image(outDir+'/'+"problem_rows"+str(key)+'.png', x=110, y=190, w=79, h=42)
+			pdf.image(os.path.join(outDir+'/'+"problem_rows"+str(key)+'.png'), x=110, y=190, w=79, h=42)
 			plt.bar(np.arange(len(problem_columns.keys())), problem_columns.values(), width, edgecolor='black', align='center')
 			plt.xticks(np.arange(len(problem_columns.keys())), problem_columns.keys(), fontweight='bold')
 			plt.title('Distribution of problematic chips', fontweight='bold')
 			plt.xlabel("chip number", fontweight='bold')
 			plt.ylabel("Frequency", fontweight='bold')
 			plt.tight_layout(pad=2, w_pad=2, h_pad=2)
-			plt.savefig(outDir+'/'+'problem_chips'+str(key)+'.png', bbox_inches='tight')
+			plt.savefig(os.path.join(outDir, 'problem_chips'+str(key)+'.png'), bbox_inches='tight')
 			plt.close()
-			pdf.image(outDir+'/'+"problem_chips"+str(key)+'.png', x=110, y=230, w=79, h=42)
-			cleanup.append(outDir+'/'+'problem_rows'+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
-			cleanup.append(outDir+'/'+"problem_chips"+str(key)+'.png')  # puts image in line for deletion; happens after final PDF has been generated
+			pdf.image(os.path.join(outDir, "problem_chips"+str(key)+'.png'), x=110, y=230, w=79, h=42)
+			cleanup.append(os.path.join(outDir, 'problem_rows'+str(key)+'.png'))  # puts image in line for deletion; happens after final PDF has been generated
+			cleanup.append(os.path.join(outDir, "problem_chips"+str(key)+'.png'))  # puts image in line for deletion; happens after final PDF has been generated
 
 	# get number of chips failing missingness threshold
 	chip_fails_from_missigness = 0
@@ -611,24 +652,24 @@ def batch_effects(pdf, chipFail, sexcheck, missingness, chip_missingness_fails, 
 	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Sex: ' + str(total_chips_fail), 1, 1, 'L')
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Missingness: ' + str(chip_fails_from_missigness), 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, 'Total Number Failing due to Low Call Rate: ' + str(chip_fails_from_missigness), 1, 1, 'L')
 
 	batch_summary.set_font('Arial', 'B', 16)
 	batch_summary.set_fill_color(200)
-	batch_summary.multi_cell(0, 10, 'Batch Sample Missingness Statistics:  ', 1, 'L', True)
+	batch_summary.multi_cell(0, 10, 'Batch Sample Call Rate Statistics:  ', 1, 'L', True)
 	batch_summary.set_font('Arial', '', 14)
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Mean sample missingness across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
+	batch_summary.multi_cell(0, 10, "Mean sample call rate across all batches: "+str("%.2f" % round(stats.mean(batch_call_averages), 2))+'%', 1, 1, 'L') 
 	if len(batch_call_averages) > 1: # std deviation can't be calculated if less than 2 batches exist due to no variance
 		batch_summary.set_x(40)
-		batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
+		batch_summary.multi_cell(0, 10, "Standard Deviation of sample call rate across all batches: "+str("%.2f" % round(stats.stdev(batch_call_averages), 2)), 1, 1, 'L')
 	else:
 		batch_summary.set_x(40)
-		batch_summary.multi_cell(0, 10, "Standard Deviation in sample missingness across all batches: 0.00", 1, 1, 'L')
+		batch_summary.multi_cell(0, 10, "Standard Deviation of sample call rate across all batches: 0.00", 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with lowest missingness rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(min(batch_call_averages), 4))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with lowest average call rate: "+str(min(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(min(batch_call_averages), 4))+'%)', 1, 1, 'L')
 	batch_summary.set_x(40)
-	batch_summary.multi_cell(0, 10, "Batch with highest missingness rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(max(batch_call_averages), 4))+'%)', 1, 1, 'L')
+	batch_summary.multi_cell(0, 10, "Batch with highest average call rate: "+str(max(batch_call_averages_paired, key=batch_call_averages_paired.get))+' ('+str("%.4f" % round(max(batch_call_averages), 4))+'%)', 1, 1, 'L')
 
 
 	return cleanup, failing_chip_IDs, batch_summary

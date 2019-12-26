@@ -1,0 +1,11 @@
+{
+    "hapmap_info": {
+        "path": "/mnt/hapmap_trio_info.txt"
+    }, 
+    "plink": {
+        "path": "/mnt/plink"
+    }, 
+    "thousand_genomes": {
+        "path": "/mnt/new_TGP_vol1_MEGA_flipped_triallelic_removed_no_atgc.bed"
+    }
+}
