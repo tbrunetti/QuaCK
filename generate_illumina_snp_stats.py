@@ -217,12 +217,28 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.multi_cell(0, 8, "Total SNPs passing QC:  "+str(total_snps - len(snps_to_remove)) + ' ' + 
 			'('+str("%.2f" % round((float(total_snps - len(snps_to_remove))/float(total_snps)) * 100, 2))+'%)' , 1, 'L', True)
 	pdf.set_font('Arial', '', 14)
-	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Autosomal SNPs remaining:  "+str(autosomes_remain) + ' (' +str("%.2f" % round((float(autosomes_remain)/float(total_autosomes))*100, 2))+'%)', 1, 1, 'L')
-	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Non-autosomal SNPs remaining:  "+str(non_auto_remain) + ' (' +str("%.2f" % round((float(non_auto_remain)/float(total_non_autosomes))*100, 2))+'%)', 1, 1, 'L')
-	pdf.set_x(30)
-	pdf.multi_cell(0, 8, "Missing chromosome ID SNPs remaining:  "+str(missing_remain) + ' (' +str("%.2f" % round((float(missing_remain)/float(total_missing_chr))*100, 2))+'%)', 1, 1, 'L')
+	
+ 	try:
+ 		pdf.set_x(30)
+		pdf.multi_cell(0, 8, "Autosomal SNPs remaining:  "+str(autosomes_remain) + ' (' +str("%.2f" % round((float(autosomes_remain)/float(total_autosomes))*100, 2))+'%)', 1, 1, 'L')
+	except ZeroDivisionError:
+ 		pdf.set_x(30)
+		pdf.multi_cell(0, 8, "Autosomal SNPs remaining:  "+str(autosomes_remain) + ' (0%)', 1, 1, 'L')
+     
+ 	try:
+		pdf.set_x(30)
+		pdf.multi_cell(0, 8, "Non-autosomal SNPs remaining:  "+str(non_auto_remain) + ' (' +str("%.2f" % round((float(non_auto_remain)/float(total_non_autosomes))*100, 2))+'%)', 1, 1, 'L')
+	except ZeroDivisionError:
+     	pdf.set_x(30)
+		pdf.multi_cell(0, 8, "Non-autosomal SNPs remaining:  "+str(non_auto_remain) + ' (0%)', 1, 1, 'L')
+
+	try:
+     	pdf.set_x(30)
+		pdf.multi_cell(0, 8, "Missing chromosome ID SNPs remaining:  "+str(missing_remain) + ' (' +str("%.2f" % round((float(missing_remain)/float(total_missing_chr))*100, 2))+'%)', 1, 1, 'L')
+	except ZeroDivisionError:
+ 		pdf.set_x(30)
+    	pdf.multi_cell(0, 8, "Missing chromosome ID SNPs remaining:  "+str(missing_remain) + ' (0%)', 1, 1, 'L')
+
 	pdf.multi_cell(0, 8, '\n\n\n', 0, 1, 'L')
 	
 
@@ -246,7 +262,7 @@ def illumina_snp_overview(inputFile, pdf, clusterSep, aatmean, aatdev, bbtmean, 
 	pdf.multi_cell(0, 5, "Maximum cluster sep:  "+ str(all_stats[clus_sep.group(0)][4]), 0, 1, 'L')
 	
 	
-		# write AA_T mean score stats
+	# write AA_T mean score stats
 	pdf.set_font('Arial', 'UB', 14)
 	pdf.cell(0, 15, "AA T mean score statistics", 0, 1, 'L')
 	pdf.set_font('Arial', '', 12)
