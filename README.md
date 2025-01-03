@@ -1,3 +1,9 @@
+> [!IMPORTANT] 
+> This repo is being **archived and no longer in active development**.  Code and anaysis are still functional, however, new features or bug fix requests will no longer be addressed.  Please use at your own discretion.  
+
+
+<br/>  
+
 # QuaCK 
 **Qua**lity **C**ontrol **K**iosk
 
